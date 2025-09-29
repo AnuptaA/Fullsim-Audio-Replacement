@@ -55,7 +55,7 @@ function HomePage() {
             Language Learning Study
           </h1>
           <p className="text-xl text-gray-600">
-            Immersive Spanish Conversation Experience
+            HCI Fall 2025 Group 3 Project
           </p>
         </div>
 

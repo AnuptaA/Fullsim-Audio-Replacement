@@ -39,7 +39,17 @@ def create_app(config_name=None):
     # serve video files
     @app.route('/videos/<path:filepath>')
     def serve_video(filepath):
-        videos_dir = os.path.join(os.path.dirname(__file__), '..', 'videos')
+        """Serve video files from videos directory"""
+        videos_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'videos')
+
+        # check existence
+        full_path = os.path.join(videos_dir, filepath)
+        if not os.path.exists(full_path):
+            return jsonify({
+                'error': 'Video not found',
+                'message': f'Please upload {filepath} to the videos directory'
+            }), 404
+        
         return send_from_directory(videos_dir, filepath)
     
     # serve static React app files
