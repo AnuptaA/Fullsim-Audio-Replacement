@@ -1,20 +1,16 @@
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
-import TestPage from './pages/TestPage';
-import './App.css';
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import HomePage from "./pages/HomePage";
+import VideoPlayerPage from "./pages/VideoPlayerPage";
+import TestPage from "./pages/TestPage";
 
 function App() {
   return (
     <Router>
-      <div className="App">
-        <nav style={{ padding: '20px', backgroundColor: '#333', color: 'white' }}>
-          <Link to="/" style={{ color: 'white', textDecoration: 'none', fontSize: '18px' }}>
-            Language Learning App - Test
-          </Link>
-        </nav>
-        <Routes>
-          <Route path="/" element={<TestPage />} />
-        </Routes>
-      </div>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/video/:videoId" element={<VideoPlayerPage />} />
+        <Route path="/test" element={<TestPage />} />
+      </Routes>
     </Router>
   );
 }

@@ -14,7 +14,6 @@ help:
 	@echo "  make dev-backend    - Run backend dev server"
 	@echo "  make deploy-local   - Full build and run production server"
 
-# install dependencies
 install:
 	@echo "Installing frontend dependencies..."
 	cd $(FRONTEND_DIR) && npm install
@@ -22,7 +21,6 @@ install:
 	cd $(BACKEND_DIR) && pip install -r requirements.txt
 	@echo "✓ All dependencies installed"
 
-# build frontend React app and copy to backend folder so Flask serves
 build:
 	@echo "Building React app..."
 	cd $(FRONTEND_DIR) && npm run build
@@ -32,7 +30,6 @@ build:
 	cp -r $(BUILD_DIR) $(STATIC_DIR)
 	@echo "✓ Build complete! Static files are in $(STATIC_DIR)"
 
-# clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
 	rm -rf $(BUILD_DIR)
@@ -40,17 +37,14 @@ clean:
 	rm -rf $(FRONTEND_DIR)/node_modules/.vite
 	@echo "✓ Clean complete"
 
-# run frontend dev server
 dev-frontend:
 	@echo "Starting frontend dev server..."
 	cd $(FRONTEND_DIR) && npm run dev
 
-# run backend dev server
 dev-backend:
-	@echo "Starting backend dev server..."
+	@echo "Starting backend dev server on port 3000..."
 	cd $(BACKEND_DIR) && source venv/bin/activate && python app.py
 
-# full deployment build for Render
 deploy-local: clean build
-	@echo "Starting production server..."
+	@echo "Starting production server on port 3000..."
 	cd $(BACKEND_DIR) && source venv/bin/activate && gunicorn -w 4 -b 0.0.0.0:3000 app:app

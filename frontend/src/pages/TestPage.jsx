@@ -1,13 +1,13 @@
-import { useState, useEffect } from 'react';
-import { participantAPI, videoAPI, healthCheck } from '../services/api';
+import { useState, useEffect } from "react";
+import { participantAPI, videoAPI, healthCheck } from "../services/api";
 
 function TestPage() {
   const [health, setHealth] = useState(null);
   const [participants, setParticipants] = useState([]);
   const [videos, setVideos] = useState([]);
   const [newParticipant, setNewParticipant] = useState({
-    participant_code: '',
-    native_language: ''
+    participant_code: "",
+    native_language: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -21,15 +21,15 @@ function TestPage() {
       const [healthRes, participantsRes, videosRes] = await Promise.all([
         healthCheck(),
         participantAPI.list(),
-        videoAPI.list()
+        videoAPI.list(),
       ]);
-      
+
       setHealth(healthRes.data);
       setParticipants(participantsRes.data);
       setVideos(videosRes.data);
     } catch (err) {
       setError(err.message);
-      console.error('Error loading data:', err);
+      console.error("Error loading data:", err);
     }
   };
 
@@ -37,12 +37,12 @@ function TestPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    
+
     try {
       await participantAPI.create(newParticipant);
-      setNewParticipant({ participant_code: '', native_language: '' });
+      setNewParticipant({ participant_code: "", native_language: "" });
       await loadData();
-      alert('Participant created successfully!');
+      alert("Participant created successfully!");
     } catch (err) {
       setError(err.response?.data?.error || err.message);
     } finally {
@@ -51,113 +51,157 @@ function TestPage() {
   };
 
   return (
-    <div style={{ padding: '20px', fontFamily: 'Arial, sans-serif' }}>
-      <h1>Backend Test Page</h1>
-      
-      {/* health check */}
-      <div style={{ marginBottom: '30px', padding: '15px', backgroundColor: '#f0f0f0', borderRadius: '5px' }}>
-        <h2>Health Check</h2>
-        {health ? (
-          <pre>{JSON.stringify(health, null, 2)}</pre>
-        ) : (
-          <p>Loading...</p>
-        )}
-      </div>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-6xl mx-auto">
+        <h1 className="text-4xl font-bold text-gray-800 mb-8">
+          Backend Test Page
+        </h1>
 
-      {/* test create participant form */}
-      <div style={{ marginBottom: '30px', padding: '15px', backgroundColor: '#e8f5e9', borderRadius: '5px' }}>
-        <h2>Create Participant</h2>
-        <form onSubmit={handleCreateParticipant}>
-          <div style={{ marginBottom: '10px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
-              Participant Code:
+        {/* Health Check */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-2xl font-semibold mb-4">Health Check</h2>
+          {health ? (
+            <pre className="bg-gray-100 p-4 rounded overflow-x-auto">
+              {JSON.stringify(health, null, 2)}
+            </pre>
+          ) : (
+            <p className="text-gray-500">Loading...</p>
+          )}
+        </div>
+
+        {/* Create Participant */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-2xl font-semibold mb-4">Create Participant</h2>
+          <form onSubmit={handleCreateParticipant} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Participant Code
+              </label>
               <input
                 type="text"
                 value={newParticipant.participant_code}
-                onChange={(e) => setNewParticipant({...newParticipant, participant_code: e.target.value})}
+                onChange={(e) =>
+                  setNewParticipant({
+                    ...newParticipant,
+                    participant_code: e.target.value,
+                  })
+                }
                 required
-                style={{ marginLeft: '10px', padding: '5px' }}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
-            </label>
-          </div>
-          <div style={{ marginBottom: '10px' }}>
-            <label style={{ display: 'block', marginBottom: '5px' }}>
-              Native Language:
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Native Language
+              </label>
               <input
                 type="text"
                 value={newParticipant.native_language}
-                onChange={(e) => setNewParticipant({...newParticipant, native_language: e.target.value})}
-                style={{ marginLeft: '10px', padding: '5px' }}
+                onChange={(e) =>
+                  setNewParticipant({
+                    ...newParticipant,
+                    native_language: e.target.value,
+                  })
+                }
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
-            </label>
-          </div>
-          <button 
-            type="submit" 
-            disabled={loading}
-            style={{ padding: '8px 16px', cursor: 'pointer' }}
-          >
-            {loading ? 'Creating...' : 'Create Participant'}
-          </button>
-        </form>
-        {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
-      </div>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg disabled:opacity-50 transition"
+            >
+              {loading ? "Creating..." : "Create Participant"}
+            </button>
+          </form>
+          {error && <p className="text-red-600 mt-4">{error}</p>}
+        </div>
 
-      {/* list of participatns */}
-      <div style={{ marginBottom: '30px', padding: '15px', backgroundColor: '#fff3e0', borderRadius: '5px' }}>
-        <h2>Participants ({participants.length})</h2>
-        {participants.length > 0 ? (
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ backgroundColor: '#f5f5f5' }}>
-                <th style={{ padding: '8px', textAlign: 'left' }}>ID</th>
-                <th style={{ padding: '8px', textAlign: 'left' }}>Code</th>
-                <th style={{ padding: '8px', textAlign: 'left' }}>Language</th>
-                <th style={{ padding: '8px', textAlign: 'left' }}>Created</th>
-              </tr>
-            </thead>
-            <tbody>
-              {participants.map((p) => (
-                <tr key={p.id} style={{ borderBottom: '1px solid #ddd' }}>
-                  <td style={{ padding: '8px' }}>{p.id}</td>
-                  <td style={{ padding: '8px' }}>{p.participant_code}</td>
-                  <td style={{ padding: '8px' }}>{p.native_language || 'N/A'}</td>
-                  <td style={{ padding: '8px' }}>{new Date(p.created_at).toLocaleDateString()}</td>
-                </tr>
+        {/* Participants List */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-2xl font-semibold mb-4">
+            Participants ({participants.length})
+          </h2>
+          {participants.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Code
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Language
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Created
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {participants.map((p) => (
+                    <tr key={p.id}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {p.native_language || "N/A"}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {new Date(p.created_at).toLocaleDateString()}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="text-gray-500">No participants yet</p>
+          )}
+        </div>
+
+        {/* Videos List */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-2xl font-semibold mb-4">
+            Videos ({videos.length})
+          </h2>
+          {videos.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {videos.map((v) => (
+                <div
+                  key={v.id}
+                  className="border border-gray-200 rounded-lg p-4"
+                >
+                  <h3 className="font-bold text-lg mb-2">{v.title}</h3>
+                  <p className="text-sm text-gray-600 mb-2">{v.description}</p>
+                  <div className="text-sm text-gray-500 space-y-1">
+                    <p>
+                      <strong>ID:</strong> {v.video_id}
+                    </p>
+                    <p>
+                      <strong>Snippets:</strong> {v.total_snippets}
+                    </p>
+                    <p>
+                      <strong>Audio:</strong> {v.audio_type}
+                    </p>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        ) : (
-          <p>No participants yet</p>
-        )}
-      </div>
+            </div>
+          ) : (
+            <p className="text-gray-500">
+              No videos yet. Run seed_data.py to add sample videos.
+            </p>
+          )}
+        </div>
 
-      {/* videos list */}
-      <div style={{ marginBottom: '30px', padding: '15px', backgroundColor: '#e3f2fd', borderRadius: '5px' }}>
-        <h2>Videos ({videos.length})</h2>
-        {videos.length > 0 ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '15px' }}>
-            {videos.map((v) => (
-              <div key={v.id} style={{ padding: '15px', backgroundColor: 'white', borderRadius: '5px', border: '1px solid #ddd' }}>
-                <h3 style={{ marginTop: 0 }}>{v.title}</h3>
-                <p><strong>Video ID:</strong> {v.video_id}</p>
-                <p><strong>Description:</strong> {v.description}</p>
-                <p><strong>Snippets:</strong> {v.total_snippets}</p>
-                <p><strong>Audio Type:</strong> {v.audio_type}</p>
-                <p><strong>Created:</strong> {new Date(v.created_at).toLocaleDateString()}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p>No videos yet. Run seed_data.py to add sample videos.</p>
-        )}
+        <button
+          onClick={loadData}
+          className="bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-6 rounded-lg transition"
+        >
+          Refresh Data
+        </button>
       </div>
-
-      <button 
-        onClick={loadData}
-        style={{ padding: '10px 20px', fontSize: '16px', cursor: 'pointer' }}
-      >
-        Refresh Data
-      </button>
     </div>
   );
 }
