@@ -1,5 +1,8 @@
+import random
+import string
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required
+from datetime import datetime
 from models import db, Participant
 from middleware.auth import require_client_secret
 import os
@@ -29,45 +32,55 @@ def admin_login():
 @jwt_required()
 def list_all_participants():
     participants = Participant.query.all()
-    # Use the to_dict() method from the model
     return jsonify([p.to_dict() for p in participants]), 200
 
 @admin_bp.route('/participants', methods=['POST'])
-@require_client_secret
 @jwt_required()
-def create_participant():
-    data = request.json
-    
-    # Validate required fields
-    if not data or 'participant_id' not in data:
-        return jsonify({'error': 'participant_id is required'}), 400
-    
-    if not data.get('email'):
-        return jsonify({'error': 'email is required'}), 400
-    
-    # Check if participant already exists
-    existing = Participant.query.filter_by(participant_id=data['participant_id']).first()
-    if existing:
-        return jsonify({'error': 'Participant already exists'}), 400
-    
-    # Check if email already exists
-    existing_email = Participant.query.filter_by(email=data['email']).first()
-    if existing_email:
-        return jsonify({'error': 'Email already exists'}), 400
-    
-    participant = Participant(
-        participant_id=data['participant_id'],
-        email=data['email']
-    )
-    
-    db.session.add(participant)
-    
+def admin_create_participant():
     try:
+        data = request.json
+        email = data.get('email')
+        
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+        
+        # check if email already exists
+        existing = Participant.query.filter_by(email=email).first()
+        if existing:
+            return jsonify({'error': 'Email already exists'}), 400
+        
+        # generate unique participant ID
+        while True:
+            # format: C###L### (e.g., C205B201)
+            participant_id = 'C' + ''.join(random.choices(string.digits, k=3)) + \
+                           random.choice(string.ascii_uppercase) + \
+                           ''.join(random.choices(string.digits, k=3))
+            
+            # check if this ID already exists
+            if not Participant.query.filter_by(participant_id=participant_id).first():
+                break
+        
+        participant = Participant(
+            participant_id=participant_id,
+            email=email,
+            created_at=datetime.utcnow()
+        )
+        
+        db.session.add(participant)
         db.session.commit()
-        return jsonify(participant.to_dict()), 201
+        
+        return jsonify({
+            'id': participant.id,
+            'participant_id': participant.participant_id,
+            'email': participant.email,
+            'created_at': participant.created_at.isoformat()
+        }), 201
+        
     except Exception as e:
         db.session.rollback()
+        print(f"Error creating participant: {e}")
         return jsonify({'error': str(e)}), 500
+    
 
 @admin_bp.route('/participants/<int:participant_db_id>', methods=['DELETE'])
 @require_client_secret
@@ -82,5 +95,5 @@ def delete_participant(participant_db_id):
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
-    
+
 #----------------------------------------------------------------------#
