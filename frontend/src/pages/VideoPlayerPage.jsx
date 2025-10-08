@@ -12,6 +12,7 @@ function VideoPlayerPage() {
   const [existingResponses, setExistingResponses] = useState({});
 
   const [hasPlayedVideo, setHasPlayedVideo] = useState(false);
+  const [hasVideoEnded, setHasVideoEnded] = useState(false);
   const [recording, setRecording] = useState(null);
   const [recordingUrl, setRecordingUrl] = useState(null);
   const [savedRecordingPath, setSavedRecordingPath] = useState(null);
@@ -40,7 +41,7 @@ function VideoPlayerPage() {
   const loadVideo = async () => {
     try {
       const response = await videoAPI.get(videoId);
-    //   console.log("Video data:", response.data);
+      //   console.log("Video data:", response.data);
 
       if (!response.data.snippets || !Array.isArray(response.data.snippets)) {
         console.error("Video data missing snippets array:", response.data);
@@ -64,7 +65,7 @@ function VideoPlayerPage() {
         pId,
         videoId
       );
-    //   console.log("Existing responses:", response.data);
+      //   console.log("Existing responses:", response.data);
 
       if (!Array.isArray(response.data)) {
         console.warn("Expected array of responses, got:", response.data);
@@ -95,9 +96,10 @@ function VideoPlayerPage() {
 
   useEffect(() => {
     setHasPlayedVideo(false);
-    
+    setHasVideoEnded(false);
+
     if (existingResponse) {
-    //   console.log("Loading existing response for snippet:", currentSnippetIndex);
+      //   console.log("Loading existing response for snippet:", currentSnippetIndex);
       setSavedRecordingPath(existingResponse.audio_recording_path || null);
       setMcqAnswers(existingResponse.mcq_answers || []);
       setHasSubmitted(!!existingResponse.submitted_at);
@@ -123,31 +125,31 @@ function VideoPlayerPage() {
   };
 
   const handleVideoEnd = () => {
-    // video ended, user can now see response section
+    setHasVideoEnded(true);
   };
 
   const startRecording = async () => {
     try {
-    //   console.log("=== Starting Recording ===");
+      //   console.log("=== Starting Recording ===");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    //   console.log("Got media stream:", stream);
-      
+      //   console.log("Got media stream:", stream);
+
       const mimeTypes = [
-        'audio/webm;codecs=opus',
-        'audio/webm',
-        'audio/ogg;codecs=opus',
-        'audio/mp4',
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/mp4",
       ];
-      
+
       let selectedMimeType = null;
       for (const mimeType of mimeTypes) {
         if (MediaRecorder.isTypeSupported(mimeType)) {
           selectedMimeType = mimeType;
-        //   console.log("Selected MIME type:", mimeType);
+          //   console.log("Selected MIME type:", mimeType);
           break;
         }
       }
-      
+
       if (!selectedMimeType) {
         console.error("No supported MIME types found!");
         alert("Your browser doesn't support audio recording");
@@ -155,7 +157,7 @@ function VideoPlayerPage() {
       }
 
       const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: selectedMimeType
+        mimeType: selectedMimeType,
       });
       mediaRecorderRef.current = mediaRecorder;
       recordedChunksRef.current = [];
@@ -170,7 +172,7 @@ function VideoPlayerPage() {
       mediaRecorder.onstop = () => {
         // console.log("=== Recording Stopped ===");
         console.log("Total chunks:", recordedChunksRef.current.length);
-        
+
         if (recordedChunksRef.current.length === 0) {
           console.error("No audio data recorded!");
           alert("Recording failed - no audio data captured");
@@ -180,11 +182,11 @@ function VideoPlayerPage() {
         const blob = new Blob(recordedChunksRef.current, {
           type: selectedMimeType,
         });
-        
+
         console.log("Created blob:");
         console.log("  - Size:", blob.size, "bytes");
         console.log("  - Type:", blob.type);
-        
+
         if (blob.size === 0) {
           console.error("Blob is empty!");
           alert("Recording failed - empty audio file");
@@ -195,9 +197,9 @@ function VideoPlayerPage() {
         const url = URL.createObjectURL(blob);
         // console.log("Created blob URL:", url);
         setRecordingUrl(url);
-        
+
         stream.getTracks().forEach((track) => {
-        //   console.log("Stopping track:", track.kind);
+          //   console.log("Stopping track:", track.kind);
           track.stop();
         });
       };
@@ -222,7 +224,7 @@ function VideoPlayerPage() {
       mediaRecorderRef.current &&
       mediaRecorderRef.current.state === "recording"
     ) {
-    //   console.log("Stopping MediaRecorder, chunks:", recordedChunksRef.current.length);
+      //   console.log("Stopping MediaRecorder, chunks:", recordedChunksRef.current.length);
       mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
@@ -247,7 +249,9 @@ function VideoPlayerPage() {
     }
 
     if (mcqAnswers.length !== currentSnippet.mcq_questions.length) {
-      alert(`Please answer all ${currentSnippet.mcq_questions.length} questions! You've answered ${mcqAnswers.length}.`);
+      alert(
+        `Please answer all ${currentSnippet.mcq_questions.length} questions! You've answered ${mcqAnswers.length}.`
+      );
       return;
     }
 
@@ -272,14 +276,18 @@ function VideoPlayerPage() {
             videoId,
             currentSnippetIndex
           );
-        //   console.log("Upload response:", uploadResponse.data);
+          //   console.log("Upload response:", uploadResponse.data);
           audioPath = uploadResponse.data.path;
-        //   console.log("Audio path:", audioPath);
+          //   console.log("Audio path:", audioPath);
           setSavedRecordingPath(audioPath);
         } catch (uploadError) {
           console.error("Upload error:", uploadError);
           console.error("Upload error response:", uploadError.response?.data);
-          throw new Error(`Failed to upload recording: ${uploadError.response?.data?.error || uploadError.message}`);
+          throw new Error(
+            `Failed to upload recording: ${
+              uploadError.response?.data?.error || uploadError.message
+            }`
+          );
         }
       }
 
@@ -292,8 +300,8 @@ function VideoPlayerPage() {
         submit: true,
       };
 
-    //   console.log("=== Submitting Response ===");
-    //   console.log("Response data:", responseData);
+      //   console.log("=== Submitting Response ===");
+      //   console.log("Response data:", responseData);
 
       try {
         const submitResponse = await responseAPI.create(responseData);
@@ -301,7 +309,11 @@ function VideoPlayerPage() {
       } catch (submitError) {
         console.error("Submit error:", submitError);
         console.error("Submit error response:", submitError.response?.data);
-        throw new Error(`Failed to save response: ${submitError.response?.data?.error || submitError.message}`);
+        throw new Error(
+          `Failed to save response: ${
+            submitError.response?.data?.error || submitError.message
+          }`
+        );
       }
 
       setHasSubmitted(true);
@@ -320,7 +332,7 @@ function VideoPlayerPage() {
       alert(`Failed to submit: ${error.message}`);
     } finally {
       setIsUploading(false);
-    //   console.log("=== Submit Complete ===");
+      //   console.log("=== Submit Complete ===");
     }
   };
 
@@ -369,8 +381,8 @@ function VideoPlayerPage() {
     );
   }
 
-  // Show response section if: video has been played, OR already submitted
-  const showResponseSection = hasPlayedVideo || hasSubmitted;
+  // show response section if: video has ended, OR already submitted
+  const showResponseSection = hasVideoEnded || hasSubmitted;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 p-8">
@@ -428,7 +440,8 @@ function VideoPlayerPage() {
                   Audio Response
                 </h3>
                 <p className="text-md font-semibold text-white mb-4">
-                    Please record your spoken response to the snippet you just watched.
+                  Please record your spoken response to the snippet you just
+                  watched.
                 </p>
 
                 {!hasSubmitted ? (
@@ -438,7 +451,11 @@ function VideoPlayerPage() {
                         onClick={startRecording}
                         className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg transition duration-200 flex items-center justify-center gap-2"
                       >
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          className="w-5 h-5"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <circle cx="12" cy="12" r="10" />
                         </svg>
                         Start Recording
@@ -450,7 +467,11 @@ function VideoPlayerPage() {
                         onClick={stopRecording}
                         className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg transition duration-200 flex items-center justify-center gap-2 animate-pulse"
                       >
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                        <svg
+                          className="w-5 h-5"
+                          fill="currentColor"
+                          viewBox="0 0 24 24"
+                        >
                           <rect x="6" y="6" width="12" height="12" />
                         </svg>
                         Stop Recording
@@ -464,7 +485,10 @@ function VideoPlayerPage() {
                             Recording complete - Listen to your recording:
                           </p>
                           <p className="text-gray-400 text-xs mb-2">
-                            Please replay the recording at least once to ensure it is correct before submitting. There may be a playback issue due to recording delay on the first playback.
+                            Please replay the recording at least once to ensure
+                            it is correct before submitting. There may be a
+                            playback issue due to recording delay on the first
+                            playback.
                           </p>
                           <audio
                             controls
@@ -472,11 +496,17 @@ function VideoPlayerPage() {
                             src={recordingUrl}
                             className="w-full mb-3"
                             onLoadedMetadata={(e) => {
-                              console.log("Audio loaded, duration:", e.target.duration);
+                              console.log(
+                                "Audio loaded, duration:",
+                                e.target.duration
+                              );
                             }}
                             onError={(e) => {
                               console.error("Audio playback error:", e);
-                              console.error("Error code:", e.target.error?.code);
+                              console.error(
+                                "Error code:",
+                                e.target.error?.code
+                              );
                               console.error("Blob URL:", recordingUrl);
                             }}
                             onCanPlay={() => console.log("Audio can play")}
@@ -525,7 +555,10 @@ function VideoPlayerPage() {
                 <div className="space-y-6">
                   {currentSnippet.mcq_questions &&
                     currentSnippet.mcq_questions.map((q, qIndex) => (
-                      <div key={qIndex} className="border-b border-gray-400 pb-4 last:border-0">
+                      <div
+                        key={qIndex}
+                        className="border-b border-gray-400 pb-4 last:border-0"
+                      >
                         <p className="text-white font-semibold mb-3">
                           {qIndex + 1}. {q.question}
                         </p>

@@ -8,7 +8,7 @@ def create_dummy_files():
     
     print("Creating dummy media files...")
     
-    for video_id in [1, 2, 3]:
+    for video_id in [1, 2, 3, 4, 5]:
         num_snippets = 2
         
         for snippet_idx in range(num_snippets):

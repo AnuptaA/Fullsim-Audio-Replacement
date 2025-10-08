@@ -64,11 +64,27 @@ def seed_database():
             },
             {
                 'video_id': 3,
-                'title': 'French Conversation - Hotel',
-                'description': 'Hotel check-in conversation in French',
+                'title': 'Spanish Conversation - Hotel',
+                'description': 'Hotel check-in conversation in Spanish',
                 'total_snippets': 2,
                 'audio_type': 'original',
                 'google_form_url': 'https://forms.google.com/example3'
+            },
+            {
+                'video_id': 4,
+                'title': 'Spanish Conversation - Train Station',
+                'description': 'Asking for directions at a train station in Spanish',
+                'total_snippets': 2,
+                'audio_type': 'original',
+                'google_form_url': 'https://forms.google.com/example4'
+            },
+            {
+                'video_id': 5,
+                'title': 'Spanish Conversation - Market',
+                'description': 'Shopping at a local market in Spanish',
+                'total_snippets': 2,
+                'audio_type': 'original',
+                'google_form_url': 'https://forms.google.com/example5'
             }
         ]
         
