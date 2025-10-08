@@ -2,51 +2,52 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 from sqlalchemy import JSON
 
+#----------------------------------------------------------------------#
+
 db = SQLAlchemy()
+
+#----------------------------------------------------------------------#
 
 class Participant(db.Model):
     """Store participant information"""
     __tablename__ = 'participants'
     
-    # table stuff
     id = db.Column(db.Integer, primary_key=True)
-    participant_code = db.Column(db.String(100), unique=True, nullable=False, index=True)
-    native_language = db.Column(db.String(50))
+    participant_id = db.Column(db.String(16), unique=True, nullable=False, index=True)
+    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     
     # relationships
-    interactions = db.relationship('Interaction', backref='participant', lazy='dynamic', cascade='all, delete-orphan')
-    comprehension_responses = db.relationship('ComprehensionResponse', backref='participant', lazy='dynamic', cascade='all, delete-orphan')
+    snippet_responses = db.relationship('SnippetResponse', backref='participant', lazy='dynamic', cascade='all, delete-orphan')
     
     def to_dict(self):
         return {
             'id': self.id,
-            'participant_code': self.participant_code,
-            'native_language': self.native_language,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'participant_id': self.participant_id,
+            'email': self.email,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
         }
     
     def __repr__(self):
-        return f'<Participant {self.participant_code}>'
+        return f'<Participant {self.participant_id}>'
 
+#----------------------------------------------------------------------#
 
 class Video(db.Model):
     """Store video metadata"""
     __tablename__ = 'videos'
     
-    # table stuff
     id = db.Column(db.Integer, primary_key=True)
-    video_id = db.Column(db.String(100), unique=True, nullable=False, index=True)
+    video_id = db.Column(db.Integer, unique=True, nullable=False)
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
-    total_snippets = db.Column(db.Integer, nullable=False, default=0)
-    audio_type = db.Column(db.String(50), nullable=False)  # full_replacement, balanced_simultaneous, muffled_simultaneous
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    total_snippets = db.Column(db.Integer, nullable=False)
+    audio_type = db.Column(db.String(50), nullable=False)
+    google_form_url = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # relationships
-    snippets = db.relationship('Snippet', backref='video', lazy='dynamic', cascade='all, delete-orphan', order_by='Snippet.snippet_index')
-    interactions = db.relationship('Interaction', backref='video', lazy='dynamic')
-    
+    snippets = db.relationship('Snippet', backref='video', lazy=True, cascade='all, delete-orphan')
+
     def to_dict(self, include_snippets=False):
         data = {
             'id': self.id,
@@ -55,31 +56,34 @@ class Video(db.Model):
             'description': self.description,
             'total_snippets': self.total_snippets,
             'audio_type': self.audio_type,
-            'created_at': self.created_at.isoformat() if self.created_at else None
+            'google_form_url': self.google_form_url,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
         }
         if include_snippets:
-            data['snippets'] = [s.to_dict() for s in self.snippets.order_by(Snippet.snippet_index).all()]
+            # get snippets ordered by snippet_index
+            ordered_snippets = Snippet.query.filter_by(video_id=self.id).order_by(Snippet.snippet_index).all()
+            data['snippets'] = [s.to_dict() for s in ordered_snippets]
         return data
     
     def __repr__(self):
         return f'<Video {self.video_id}>'
 
+#----------------------------------------------------------------------#
 
 class Snippet(db.Model):
     """Store individual video snippet information"""
     __tablename__ = 'snippets'
     
-    # table stuff
     id = db.Column(db.Integer, primary_key=True)
     video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False, index=True)
     snippet_index = db.Column(db.Integer, nullable=False)
     video_filename = db.Column(db.String(200), nullable=False)
     audio_filename = db.Column(db.String(200), nullable=False)
-    duration = db.Column(db.Float, nullable=False)  # duration in seconds
-    transcript_original = db.Column(db.Text)  # spanish transcript
-    transcript_translated = db.Column(db.Text)  # english translation
+    duration = db.Column(db.Float, nullable=False)
+    transcript_original = db.Column(db.Text)
+    transcript_translated = db.Column(db.Text)
+    mcq_questions = db.Column(JSON)
     
-    # need to ensure unique snippet index per video
     __table_args__ = (
         db.UniqueConstraint('video_id', 'snippet_index', name='unique_video_snippet'),
         db.Index('idx_video_snippet', 'video_id', 'snippet_index'),
@@ -94,73 +98,47 @@ class Snippet(db.Model):
             'audio_filename': self.audio_filename,
             'duration': self.duration,
             'transcript_original': self.transcript_original,
-            'transcript_translated': self.transcript_translated
+            'transcript_translated': self.transcript_translated,
+            'mcq_questions': self.mcq_questions or [],
         }
     
     def __repr__(self):
-        return f'<Snippet {self.video_id}-{self.snippet_index}>'
+        return f'<Snippet {self.video_id}:{self.snippet_index}>'
 
+#----------------------------------------------------------------------#
 
-class Interaction(db.Model):
-    """Store user interactions during video playback"""
-    __tablename__ = 'interactions'
+class SnippetResponse(db.Model):
+    """Store participant responses for each snippet"""
+    __tablename__ = 'snippet_responses'
     
     id = db.Column(db.Integer, primary_key=True)
     participant_id = db.Column(db.Integer, db.ForeignKey('participants.id'), nullable=False, index=True)
-    video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False, index=True)
-    snippet_index = db.Column(db.Integer, nullable=False)
+    snippet_id = db.Column(db.Integer, db.ForeignKey('snippets.id'), nullable=False, index=True)
+    audio_recording_path = db.Column(db.String(500))
+    audio_duration = db.Column(db.Float)
+    mcq_answers = db.Column(JSON)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    submitted_at = db.Column(db.DateTime, nullable=True, index=True)
     
-    # keystroke data: [{key: 'A', timestamp: 1234567890, video_time: 5.2}, ...]
-    keystroke_data = db.Column(JSON)
-    
-    # path to recorded audio response
-    response_recording_path = db.Column(db.String(500))
-    
-    # timestamps
-    started_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    completed_at = db.Column(db.DateTime)
+    __table_args__ = (
+        db.UniqueConstraint('participant_id', 'snippet_id', name='unique_participant_snippet_response'),
+    )
     
     def to_dict(self):
+        # participant_id here is the FK (integer)
+        # routes will add the participant_id param when needed
         return {
             'id': self.id,
-            'participant_id': self.participant_id,
-            'video_id': self.video_id,
-            'snippet_index': self.snippet_index,
-            'keystroke_data': self.keystroke_data,
-            'response_recording_path': self.response_recording_path,
-            'started_at': self.started_at.isoformat() if self.started_at else None,
-            'completed_at': self.completed_at.isoformat() if self.completed_at else None
+            'participant_id': self.participant_id,  # this is the FK (integer)
+            'snippet_id': self.snippet_id,
+            'audio_recording_path': self.audio_recording_path,
+            'audio_duration': self.audio_duration,
+            'mcq_answers': self.mcq_answers or [],
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'submitted_at': self.submitted_at.isoformat() if self.submitted_at else None,
         }
     
     def __repr__(self):
-        return f'<Interaction P{self.participant_id}-V{self.video_id}-S{self.snippet_index}>'
-
-
-class ComprehensionResponse(db.Model):
-    """Unsure if we need this but if we do, stores end-of-video comprehension task responses"""
-    __tablename__ = 'comprehension_responses'
+        return f'<SnippetResponse participant:{self.participant_id} snippet:{self.snippet_id}>'
     
-    id = db.Column(db.Integer, primary_key=True)
-    participant_id = db.Column(db.Integer, db.ForeignKey('participants.id'), nullable=False, index=True)
-    video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False, index=True)
-    
-    # custom quiz/Google Form data
-    response_data = db.Column(JSON, nullable=False)
-    
-    # score/metrics if applicable
-    score = db.Column(db.Float)
-    
-    completed_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
-    
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'participant_id': self.participant_id,
-            'video_id': self.video_id,
-            'response_data': self.response_data,
-            'score': self.score,
-            'completed_at': self.completed_at.isoformat() if self.completed_at else None
-        }
-    
-    def __repr__(self):
-        return f'<ComprehensionResponse P{self.participant_id}-V{self.video_id}>'
+#----------------------------------------------------------------------#

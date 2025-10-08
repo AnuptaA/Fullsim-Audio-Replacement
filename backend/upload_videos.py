@@ -3,6 +3,14 @@ import sys
 from models import db, Video, Snippet
 from app import create_app
 
+#----------------------------------------------------------------------#
+
+##
+## THIS FILE IS DEPRECATED, NEEDS TO BE UPDATED BEFORE USE IN PROD   ##
+##
+
+#----------------------------------------------------------------------#
+
 def upload_video_metadata(video_id, title, description, audio_type, snippets_data):
     """
     Upload video and snippet metadata to database
@@ -54,6 +62,8 @@ def upload_video_metadata(video_id, title, description, audio_type, snippets_dat
         
         db.session.commit()
         print(f"Successfully uploaded {video_id} with {len(snippets_data)} snippets")
+
+#----------------------------------------------------------------------#
 
 if __name__ == '__main__':
     # Example usage

@@ -2,6 +2,8 @@ from app import create_app
 from models import db, Video, Snippet, Participant
 import os
 
+#----------------------------------------------------------------------#
+
 def seed_database():
     flask_env = os.getenv('FLASK_ENV', 'development')
     app = create_app(flask_env)
@@ -182,10 +184,12 @@ def seed_database():
                 db.session.add(snippet)
         
         db.session.commit()
-        print(f"✓ Database seeded successfully!")
+        print(f"Database seeded successfully!")
         print(f"  - Created 1 participant")
         print(f"  - Created {len(videos_data)} videos")
         print(f"  - Created {sum(v['snippets'] for v in videos_data)} snippets")
+
+#----------------------------------------------------------------------#
 
 if __name__ == '__main__':
     seed_database()

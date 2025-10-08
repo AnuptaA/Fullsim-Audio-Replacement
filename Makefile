@@ -19,7 +19,7 @@ install:
 	cd $(FRONTEND_DIR) && npm install
 	@echo "Installing backend dependencies..."
 	cd $(BACKEND_DIR) && pip install -r requirements.txt
-	@echo "✓ All dependencies installed"
+	@echo "All dependencies installed"
 
 build:
 	@echo "Building React app..."
@@ -28,14 +28,14 @@ build:
 	rm -rf $(STATIC_DIR)
 	@echo "Copying build to backend/static..."
 	cp -r $(BUILD_DIR) $(STATIC_DIR)
-	@echo "✓ Build complete! Static files are in $(STATIC_DIR)"
+	@echo "Build complete! Static files are in $(STATIC_DIR)"
 
 clean:
 	@echo "Cleaning build artifacts..."
 	rm -rf $(BUILD_DIR)
 	rm -rf $(STATIC_DIR)
 	rm -rf $(FRONTEND_DIR)/node_modules/.vite
-	@echo "✓ Clean complete"
+	@echo "Clean complete"
 
 dev-frontend:
 	@echo "Starting frontend dev server..."
