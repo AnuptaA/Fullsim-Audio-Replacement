@@ -650,7 +650,7 @@ function VideoPlayerPage() {
       {showCompleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-2xl font-bold mb-4">Video Complete!</h3>
+            <h3 className="text-2xl font-bold mb-4">Conversation Complete!</h3>
             <p className="mb-6">
               You've completed all snippets for this video. Thank you for your
               participation!
