@@ -652,7 +652,7 @@ function VideoPlayerPage() {
           <div className="bg-white rounded-lg p-6 max-w-md w-full">
             <h3 className="text-2xl font-bold mb-4">Conversation Complete!</h3>
             <p className="mb-6">
-              You've completed all snippets for this video. Thank you for your
+              You've completed all snippets for this conversation. Thank you for your
               participation!
             </p>
             {video.google_form_url && (
