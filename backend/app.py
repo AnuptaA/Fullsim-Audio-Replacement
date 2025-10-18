@@ -1,15 +1,11 @@
+import os
 from flask import Flask, send_from_directory, jsonify, request
 from flask_cors import CORS
 from flask_migrate import Migrate
-from flask_jwt_extended import JWTManager
+from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required
 from config import config
 from models import db
-from werkzeug.utils import secure_filename
-from middleware.auth import require_client_secret
-from routes import participants_bp, videos_bp, responses_bp
-from routes.admin import admin_bp
-import os
-import re
+from routes import register_routes
 
 #---------------------------------------------------------------------#
 
@@ -34,11 +30,94 @@ def create_app(config_name=None):
         CORS(app, origins=app.config['CORS_ORIGINS'])
     else:
         CORS(app)
-    
-    app.register_blueprint(participants_bp, url_prefix='/api/participants')
-    app.register_blueprint(videos_bp, url_prefix='/api/videos')
-    app.register_blueprint(responses_bp, url_prefix='/api/responses')
-    app.register_blueprint(admin_bp, url_prefix='/api/admin')
+
+    # register API blueprints
+    register_routes(app)
+
+    # upload audio recording
+    @app.route('/api/upload-recording', methods=['POST'])
+    @jwt_required()
+    def upload_recording():
+        
+        current_user = get_jwt_identity()
+        participant_id = request.form.get('participant_id')
+        
+        if current_user != participant_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        print("=== Upload Recording Request ===")
+        print(f"Current user: {current_user}")
+        print(f"Files: {request.files}")
+        print(f"Form data: {request.form}")
+        
+        if 'audio' not in request.files:
+            print("ERROR: No audio file in request")
+            return jsonify({'error': 'No audio file'}), 400
+        
+        audio_file = request.files['audio']
+        video_id = request.form.get('video_id')
+        snippet_index = request.form.get('snippet_index')
+        
+        print(f"Participant: {participant_id}, Video: {video_id}, Snippet: {snippet_index}")
+        print(f"Audio file type: {audio_file.content_type}")
+        print(f"Audio filename: {audio_file.filename}")
+        
+        if not all([participant_id, video_id, snippet_index]):
+            print("ERROR: Missing parameters")
+            return jsonify({'error': 'Missing parameters'}), 400
+        
+        allowed_types = [
+            'audio/webm',
+            'audio/ogg',
+            'audio/mpeg',
+            'audio/mp3',
+            'audio/wav',
+            'audio/mp4',
+            'audio/x-m4a'
+        ]
+        
+        is_valid = any(audio_file.content_type.startswith(allowed) for allowed in allowed_types)
+        
+        if not is_valid:
+            print(f"ERROR: Invalid file type: {audio_file.content_type}")
+            return jsonify({'error': f'Invalid file type: {audio_file.content_type}'}), 400
+        
+        recordings_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'recordings')
+        participant_dir = os.path.join(recordings_dir, participant_id, video_id)
+        
+        try:
+            os.makedirs(participant_dir, exist_ok=True)
+            print(f"Created/verified directory: {participant_dir}")
+        except Exception as e:
+            print(f"ERROR creating directory: {e}")
+            return jsonify({'error': f'Could not create directory: {str(e)}'}), 500
+        
+        extension = 'webm'
+        if 'ogg' in audio_file.content_type:
+            extension = 'ogg'
+        elif 'mp3' in audio_file.content_type or 'mpeg' in audio_file.content_type:
+            extension = 'mp3'
+        elif 'wav' in audio_file.content_type:
+            extension = 'wav'
+        elif 'mp4' in audio_file.content_type or 'm4a' in audio_file.content_type:
+            extension = 'm4a'
+        
+        filename = f"snippet_{snippet_index}.{extension}"
+        filepath = os.path.join(participant_dir, filename)
+        
+        try:
+            audio_file.save(filepath)
+            print(f"Saved file to: {filepath}")
+            print(f"File size: {os.path.getsize(filepath)} bytes")
+        except Exception as e:
+            print(f"ERROR saving file: {e}")
+            return jsonify({'error': f'Could not save file: {str(e)}'}), 500
+        
+        relative_path = f"recordings/{participant_id}/{video_id}/{filename}"
+        print(f"Returning path: {relative_path}")
+        print("=== Upload Complete ===\n")
+        
+        return jsonify({'path': relative_path}), 200
     
     @app.route('/api/health')
     def health_check():
@@ -67,89 +146,6 @@ def create_app(config_name=None):
         if not os.path.exists(full_path):
             return jsonify({'error': 'Recording not found'}), 404
         return send_from_directory(recordings_dir, filepath)
-    
-    # upload audio recording
-    @app.route('/api/upload-recording', methods=['POST'])
-    @require_client_secret
-    def upload_recording():
-        print("=== Upload Recording Request ===")
-        print(f"Files: {request.files}")
-        print(f"Form data: {request.form}")
-        
-        if 'audio' not in request.files:
-            print("ERROR: No audio file in request")
-            return jsonify({'error': 'No audio file'}), 400
-        
-        audio_file = request.files['audio']
-        participant_id = request.form.get('participant_id')
-        video_id = request.form.get('video_id')
-        snippet_index = request.form.get('snippet_index')
-        
-        print(f"Participant: {participant_id}, Video: {video_id}, Snippet: {snippet_index}")
-        print(f"Audio file type: {audio_file.content_type}")
-        print(f"Audio filename: {audio_file.filename}")
-        
-        if not all([participant_id, video_id, snippet_index]):
-            print("ERROR: Missing parameters")
-            return jsonify({'error': 'Missing parameters'}), 400
-        
-        # accept pretty much any audio MIME type
-        allowed_types = [
-            'audio/webm',
-            'audio/ogg',
-            'audio/mpeg',
-            'audio/mp3',
-            'audio/wav',
-            'audio/mp4',
-            'audio/x-m4a'
-        ]
-        
-        # check if content type starts with any allowed type (to handle codecs parameter)
-        is_valid = any(audio_file.content_type.startswith(allowed) for allowed in allowed_types)
-        
-        if not is_valid:
-            print(f"ERROR: Invalid file type: {audio_file.content_type}")
-            return jsonify({'error': f'Invalid file type: {audio_file.content_type}'}), 400
-        
-        # create directory structure
-        recordings_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'recordings')
-        participant_dir = os.path.join(recordings_dir, participant_id, video_id)
-        
-        try:
-            os.makedirs(participant_dir, exist_ok=True)
-            print(f"Created/verified directory: {participant_dir}")
-        except Exception as e:
-            print(f"ERROR creating directory: {e}")
-            return jsonify({'error': f'Could not create directory: {str(e)}'}), 500
-        
-        # save file with proper extension based on content type
-        extension = 'webm'
-        if 'ogg' in audio_file.content_type:
-            extension = 'ogg'
-        elif 'mp3' in audio_file.content_type or 'mpeg' in audio_file.content_type:
-            extension = 'mp3'
-        elif 'wav' in audio_file.content_type:
-            extension = 'wav'
-        elif 'mp4' in audio_file.content_type or 'm4a' in audio_file.content_type:
-            extension = 'm4a'
-        
-        filename = f"snippet_{snippet_index}.{extension}"
-        filepath = os.path.join(participant_dir, filename)
-        
-        try:
-            audio_file.save(filepath)
-            print(f"Saved file to: {filepath}")
-            print(f"File size: {os.path.getsize(filepath)} bytes")
-        except Exception as e:
-            print(f"ERROR saving file: {e}")
-            return jsonify({'error': f'Could not save file: {str(e)}'}), 500
-        
-        # return relative path for storage in DB
-        relative_path = f"recordings/{participant_id}/{video_id}/{filename}"
-        print(f"Returning path: {relative_path}")
-        print("=== Upload Complete ===\n")
-        
-        return jsonify({'path': relative_path}), 200
 
     # serve React app and handle client-side routing
     @app.route('/', defaults={'path': ''})
@@ -209,7 +205,11 @@ def create_app(config_name=None):
     
     return app
 
+#---------------------------------------------------------------------#
+
 app = create_app()
+
+#---------------------------------------------------------------------#
 
 if __name__ == '__main__':
     print(f"Starting server on port 3000...")

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { videoAPI, participantAPI } from "../services/api";
+import { videoAPI, participantAPI, requestParticipantToken } from "../services/api";
 
 function HomePage() {
   const [videos, setVideos] = useState([]);
@@ -11,11 +11,12 @@ function HomePage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    loadVideos();
     const storedId = localStorage.getItem("participantId");
-    if (storedId) {
+    const storedToken = localStorage.getItem("participantToken");
+    if (storedId && storedToken) {
       setParticipantId(storedId);
-      validateParticipant(storedId);
+      setIsValidated(true);
+      loadVideos();
     }
   }, []);
 
@@ -32,9 +33,21 @@ function HomePage() {
     setLoading(true);
     setError("");
     try {
-      await participantAPI.get(id);
-      localStorage.setItem("participantId", id);
-      setIsValidated(true);
+      // validate the ID
+      const validateResponse = await participantAPI.validate(id);
+      if (validateResponse.data.valid) {
+        // get JWT token
+        await requestParticipantToken(id);
+        
+        localStorage.setItem("participantId", id);
+        setIsValidated(true);
+        await loadVideos();  // load videos after getting token
+      } else {
+        setError("Invalid Participant ID");
+        setIsValidated(false);
+        localStorage.removeItem("participantId");
+        localStorage.removeItem("participantToken");
+      }
     } catch (err) {
       setError(
         "Invalid Participant ID: " +
@@ -42,6 +55,7 @@ function HomePage() {
       );
       setIsValidated(false);
       localStorage.removeItem("participantId");
+      localStorage.removeItem("participantToken");
     } finally {
       setLoading(false);
     }

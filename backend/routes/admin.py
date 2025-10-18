@@ -1,10 +1,9 @@
 import random
 import string
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token, jwt_required
-from datetime import datetime
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt
+from datetime import datetime, timedelta
 from models import db, Participant
-from middleware.auth import require_client_secret
 import os
 
 #----------------------------------------------------------------------#
@@ -14,7 +13,6 @@ admin_bp = Blueprint('admin', __name__)
 #----------------------------------------------------------------------#
 
 @admin_bp.route('/login', methods=['POST'])
-@require_client_secret
 def admin_login():
     data = request.json
     password = data.get('password')
@@ -22,15 +20,22 @@ def admin_login():
     admin_password = os.getenv('ADMIN_PASSWORD')
     
     if password == admin_password:
-        access_token = create_access_token(identity='admin')
+        access_token = create_access_token(
+            identity='admin',
+            additional_claims={'role': 'admin'},
+            expires_delta=timedelta(hours=8)
+        )
         return jsonify({'access_token': access_token}), 200
     
     return jsonify({'error': 'Invalid password'}), 401
 
 @admin_bp.route('/participants', methods=['GET'])
-@require_client_secret
 @jwt_required()
 def list_all_participants():
+    claims = get_jwt()
+    if claims.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
     participants = Participant.query.all()
     return jsonify([p.to_dict() for p in participants]), 200
 
@@ -83,7 +88,6 @@ def admin_create_participant():
     
 
 @admin_bp.route('/participants/<int:participant_db_id>', methods=['DELETE'])
-@require_client_secret
 @jwt_required()
 def delete_participant(participant_db_id):
     participant = Participant.query.get_or_404(participant_db_id)
