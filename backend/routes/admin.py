@@ -42,6 +42,10 @@ def list_all_participants():
 @admin_bp.route('/participants', methods=['POST'])
 @jwt_required()
 def admin_create_participant():
+    claims = get_jwt()
+    if claims.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
     try:
         data = request.json
         email = data.get('email')
@@ -90,6 +94,10 @@ def admin_create_participant():
 @admin_bp.route('/participants/<int:participant_db_id>', methods=['DELETE'])
 @jwt_required()
 def delete_participant(participant_db_id):
+    claims = get_jwt()
+    if claims.get('role') != 'admin':
+        return jsonify({'error': 'Unauthorized'}), 403
+    
     participant = Participant.query.get_or_404(participant_db_id)
     
     try:
