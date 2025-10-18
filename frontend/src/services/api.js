@@ -3,24 +3,31 @@ import axios from "axios";
 // in prod, use relative URLs; in dev, use full URL
 const API_BASE_URL = import.meta.env.DEV ? "http://localhost:3000/api" : "/api";
 
-// API Client Secret - should be in .env for production
-const API_CLIENT_SECRET =
-  import.meta.env.VITE_API_CLIENT_SECRET || "dev-secret-key";
+// // API Client Secret - should be in .env for production
+// const API_CLIENT_SECRET =
+//   import.meta.env.VITE_API_CLIENT_SECRET || "dev-secret-key";
 
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    "Content-Type": "application/json",
-    "X-API-Secret": API_CLIENT_SECRET,
+    "Content-Type": "application/json"
   },
 });
 
 api.interceptors.request.use((config) => {
-  // add admin token if present
-  const token = localStorage.getItem("adminToken");
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  // admin token takes precedence
+  const adminToken = localStorage.getItem("adminToken");
+  if (adminToken) {
+    config.headers.Authorization = `Bearer ${adminToken}`;
+    return config;
   }
+  
+  // use participant token if available
+  const participantToken = localStorage.getItem("participantToken");
+  if (participantToken) {
+    config.headers.Authorization = `Bearer ${participantToken}`;
+  }
+  
   return config;
 });
 
@@ -29,6 +36,7 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem("adminToken");
+      localStorage.removeItem("participantToken");
       if (window.location.pathname.startsWith("/admin")) {
         window.location.href = "/admin/login";
       }
@@ -41,9 +49,23 @@ api.interceptors.response.use(
   }
 );
 
+export const requestParticipantToken = async (participantId) => {
+  try {
+    const response = await axios.post(`${API_BASE_URL}/auth/participant-token`, {
+      participant_id: participantId
+    });
+    const token = response.data.token;
+    localStorage.setItem('participantToken', token);
+    return response.data;
+  } catch (error) {
+    console.error('Error getting participant token:', error);
+    throw error;
+  }
+};
+
 export const participantAPI = {
-  get: (participantId) => api.get(`/participants/${participantId}`),
-  list: () => api.get("/participants/"),
+  validate: (participantId) => axios.post(`${API_BASE_URL}/participants/validate`, { participant_id: participantId }),
+  get: (participantId) => api.get(`/participants/${participantId}`)
 };
 
 export const videoAPI = {
@@ -83,10 +105,12 @@ export const uploadRecording = async (
     ? "http://localhost:3000/api/upload-recording"
     : "/api/upload-recording";
 
+  const participantToken = localStorage.getItem("participantToken");
+
   return axios.post(uploadUrl, formData, {
     headers: {
       "Content-Type": "multipart/form-data",
-      "X-API-Secret": API_CLIENT_SECRET,
+      ...(participantToken && { Authorization: `Bearer ${participantToken}` }), 
     },
   });
 };
