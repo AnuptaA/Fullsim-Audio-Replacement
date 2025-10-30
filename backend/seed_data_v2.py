@@ -50,40 +50,35 @@ def seed_database():
                 'video_id': 1,
                 'title': 'Spanish Conversation - Restaurant',
                 'description': 'Basic restaurant conversation in Spanish',
-                'total_snippets': 2,
-                'audio_type': 'original',
+                'total_snippets': 3,  # CHANGE TO 3
                 'google_form_url': 'https://forms.google.com/example1'
             },
             {
                 'video_id': 2,
                 'title': 'Spanish Conversation - Shopping',
                 'description': 'Shopping conversation in Spanish',
-                'total_snippets': 2,
-                'audio_type': 'original',
+                'total_snippets': 3,  # CHANGE TO 3
                 'google_form_url': 'https://forms.google.com/example2'
             },
             {
                 'video_id': 3,
                 'title': 'Spanish Conversation - Hotel',
                 'description': 'Hotel check-in conversation in Spanish',
-                'total_snippets': 2,
-                'audio_type': 'original',
+                'total_snippets': 3,  # CHANGE TO 3
                 'google_form_url': 'https://forms.google.com/example3'
             },
             {
                 'video_id': 4,
                 'title': 'Spanish Conversation - Train Station',
                 'description': 'Asking for directions at a train station in Spanish',
-                'total_snippets': 2,
-                'audio_type': 'original',
+                'total_snippets': 3,  # CHANGE TO 3
                 'google_form_url': 'https://forms.google.com/example4'
             },
             {
                 'video_id': 5,
                 'title': 'Spanish Conversation - Market',
                 'description': 'Shopping at a local market in Spanish',
-                'total_snippets': 2,
-                'audio_type': 'original',
+                'total_snippets': 3,  # CHANGE TO 3
                 'google_form_url': 'https://forms.google.com/example5'
             }
         ]
@@ -106,10 +101,11 @@ def seed_database():
         for video in videos:
             for i in range(video.total_snippets):
                 snippet = Snippet(
-                    video_id=video.id,  # FK to video.id
+                    video_id=video.id,
                     snippet_index=i,
-                    video_filename=f"video_{video.video_id}_snippet_{i}.mp4",
-                    audio_filename=f"audio_{video.video_id}_snippet_{i}.mp3",
+                    video_filename_full=f"video_{video.video_id}_snippet_{i}_full.mp4",
+                    video_filename_muffled=f"video_{video.video_id}_snippet_{i}_muffled.mp4",
+                    video_filename_balanced=f"video_{video.video_id}_snippet_{i}_balanced.mp4",
                     duration=5.0 + (i * 0.5),
                     transcript_original=f"Original: This is snippet {i} from {video.title}.",
                     transcript_translated=f"Translation: This is snippet {i} from {video.title}.",

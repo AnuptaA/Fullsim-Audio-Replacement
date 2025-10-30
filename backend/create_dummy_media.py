@@ -9,28 +9,26 @@ def create_dummy_files():
     print("Creating dummy media files...")
     
     for video_id in [1, 2, 3, 4, 5]:
-        num_snippets = 2
+        num_snippets = 3
         
         for snippet_idx in range(num_snippets):
-            video_file = f"{videos_dir}/video_{video_id}_snippet_{snippet_idx}.mp4"
-            audio_file = f"{videos_dir}/audio_{video_id}_snippet_{snippet_idx}.mp3"
+            # CREATE 3 VIDEO FILES (each with audio baked in)
+            video_file_full = f"{videos_dir}/video_{video_id}_snippet_{snippet_idx}_full.mp4"
+            video_file_muffled = f"{videos_dir}/video_{video_id}_snippet_{snippet_idx}_muffled.mp4"
+            video_file_balanced = f"{videos_dir}/video_{video_id}_snippet_{snippet_idx}_balanced.mp4"
             
-            # create 2-second silent video
-            subprocess.run([
-                'ffmpeg', '-y', '-f', 'lavfi', '-i', 'color=c=black:s=640x480:d=2',
-                '-f', 'lavfi', '-i', 'anullsrc',
-                '-c:v', 'libx264', '-t', '2', '-pix_fmt', 'yuv420p',
-                video_file
-            ], capture_output=True)
+            # create 3 video files with 2-second silent video + audio
+            for video_file in [video_file_full, video_file_muffled, video_file_balanced]:
+                subprocess.run([
+                    'ffmpeg', '-y', 
+                    '-f', 'lavfi', '-i', 'color=c=black:s=640x480:d=2',
+                    '-f', 'lavfi', '-i', 'anullsrc=r=44100',
+                    '-c:v', 'libx264', '-c:a', 'aac',
+                    '-t', '2', '-pix_fmt', 'yuv420p',
+                    video_file
+                ], capture_output=True)
             
-            # create 2-second silent audio
-            subprocess.run([
-                'ffmpeg', '-y', '-f', 'lavfi', '-i', 'anullsrc=r=44100:cl=mono',
-                '-t', '2', '-q:a', '9', '-acodec', 'libmp3lame',
-                audio_file
-            ], capture_output=True)
-            
-            print(f"Created {video_file} and {audio_file}")
+            print(f"Created 3 video variants for video {video_id}, snippet {snippet_idx}")
     
     print(f"\n Done! Created {len(os.listdir(videos_dir))} files")
 
