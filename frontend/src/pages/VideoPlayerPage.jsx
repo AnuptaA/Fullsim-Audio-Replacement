@@ -10,9 +10,11 @@ function VideoPlayerPage() {
   const [currentSnippetIndex, setCurrentSnippetIndex] = useState(0);
   const [participantId, setParticipantId] = useState("");
   const [existingResponses, setExistingResponses] = useState({});
+  const [audioAssignments, setAudioAssignments] = useState({});
 
   const [hasPlayedVideo, setHasPlayedVideo] = useState(false);
   const [hasVideoEnded, setHasVideoEnded] = useState(false);
+  const [lastVideoTime, setLastVideoTime] = useState(0);
   const [recording, setRecording] = useState(null);
   const [recordingUrl, setRecordingUrl] = useState(null);
   const [savedRecordingPath, setSavedRecordingPath] = useState(null);
@@ -36,6 +38,7 @@ function VideoPlayerPage() {
     }
     setParticipantId(storedId);
     loadVideo();
+    loadAudioAssignments();
   }, [videoId, navigate]);
 
   const loadVideo = async () => {
@@ -54,6 +57,15 @@ function VideoPlayerPage() {
       console.error("Error loading video:", error);
       alert("Failed to load video");
       navigate("/");
+    }
+  };
+
+  const loadAudioAssignments = async () => {
+    try {
+      const response = await videoAPI.getAudioAssignments(videoId);
+      setAudioAssignments(response.data);
+    } catch (error) {
+      console.error("Error loading audio assignments:", error);
     }
   };
 
@@ -97,6 +109,7 @@ function VideoPlayerPage() {
   useEffect(() => {
     setHasPlayedVideo(false);
     setHasVideoEnded(false);
+    setLastVideoTime(0);  // ADD THIS
 
     if (existingResponse) {
       //   console.log("Loading existing response for snippet:", currentSnippetIndex);
@@ -119,6 +132,17 @@ function VideoPlayerPage() {
       }
     };
   }, [recordingUrl]);
+
+  const handleVideoTimeUpdate = (e) => {
+  const video = e.target;
+  const currentTime = video.currentTime;
+  
+  if (currentTime > lastVideoTime + 0.5) {
+    video.currentTime = lastVideoTime;
+  } else {
+    setLastVideoTime(currentTime);
+  }
+};
 
   const handleVideoPlay = () => {
     setHasPlayedVideo(true);
@@ -415,21 +439,23 @@ function VideoPlayerPage() {
           {/* Video Player */}
           <div className="space-y-4 mb-6">
             <video
-              className="w-full rounded-lg"
-              controls
-              onPlay={handleVideoPlay}
-              onEnded={handleVideoEnd}
-              src={`/videos/${currentSnippet.video_filename}`}
+                className="w-full rounded-lg"
+                controls
+                controlsList="nodownload noplaybackrate"
+                disablePictureInPicture
+                onPlay={handleVideoPlay}
+                onEnded={handleVideoEnd}
+                onTimeUpdate={handleVideoTimeUpdate}           // ADD
+                onSeeking={(e) => { e.target.currentTime = lastVideoTime; }}  // ADD
+                onRateChange={(e) => { e.target.playbackRate = 1.0; }}
+                src={`/videos/${
+                    audioAssignments[currentSnippet.id] 
+                    ? currentSnippet[`video_filename_${audioAssignments[currentSnippet.id]}`]
+                    : currentSnippet.video_filename_balanced
+                }`}
             >
               Your browser does not support the video tag.
             </video>
-            {/* <audio
-              controls
-              onPlay={handleVideoPlay}
-              src={`/videos/${currentSnippet.audio_filename}`}
-            >
-              Your browser does not support the audio element.
-            </audio> */}
           </div>
 
           {showResponseSection && (

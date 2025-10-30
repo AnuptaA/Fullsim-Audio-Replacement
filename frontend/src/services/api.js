@@ -72,6 +72,7 @@ export const videoAPI = {
   list: () => api.get("/videos/"),
   get: (id) => api.get(`/videos/${id}`),
   getSnippets: (videoId) => api.get(`/videos/${videoId}/snippets`),
+  getAudioAssignments: (videoId) => api.get(`/videos/${videoId}/audio-assignments`),
 };
 
 export const responseAPI = {

@@ -1,8 +1,8 @@
 """init schema
 
-Revision ID: 4a66e42cc537
+Revision ID: 5b32074b4b8b
 Revises: 
-Create Date: 2025-10-08 16:26:33.501720
+Create Date: 2025-10-28 11:49:12.377039
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '4a66e42cc537'
+revision = '5b32074b4b8b'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -35,7 +35,6 @@ def upgrade():
     sa.Column('title', sa.String(length=200), nullable=False),
     sa.Column('description', sa.Text(), nullable=True),
     sa.Column('total_snippets', sa.Integer(), nullable=False),
-    sa.Column('audio_type', sa.String(length=50), nullable=False),
     sa.Column('google_form_url', sa.String(length=500), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.PrimaryKeyConstraint('id'),
@@ -45,9 +44,10 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('video_id', sa.Integer(), nullable=False),
     sa.Column('snippet_index', sa.Integer(), nullable=False),
-    sa.Column('video_filename', sa.String(length=200), nullable=False),
-    sa.Column('audio_filename', sa.String(length=200), nullable=False),
-    sa.Column('duration', sa.Float(), nullable=False),
+    sa.Column('video_filename_full', sa.String(length=255), nullable=True),
+    sa.Column('video_filename_muffled', sa.String(length=255), nullable=True),
+    sa.Column('video_filename_balanced', sa.String(length=255), nullable=True),
+    sa.Column('duration', sa.Float(), nullable=True),
     sa.Column('transcript_original', sa.Text(), nullable=True),
     sa.Column('transcript_translated', sa.Text(), nullable=True),
     sa.Column('mcq_questions', sa.JSON(), nullable=True),
@@ -57,8 +57,18 @@ def upgrade():
     )
     with op.batch_alter_table('snippets', schema=None) as batch_op:
         batch_op.create_index('idx_video_snippet', ['video_id', 'snippet_index'], unique=False)
-        batch_op.create_index(batch_op.f('ix_snippets_video_id'), ['video_id'], unique=False)
 
+    op.create_table('participant_audio_assignments',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('participant_id', sa.Integer(), nullable=False),
+    sa.Column('snippet_id', sa.Integer(), nullable=False),
+    sa.Column('audio_type', sa.String(length=20), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['participant_id'], ['participants.id'], ),
+    sa.ForeignKeyConstraint(['snippet_id'], ['snippets.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('participant_id', 'snippet_id', name='unique_participant_snippet_audio')
+    )
     op.create_table('snippet_responses',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('participant_id', sa.Integer(), nullable=False),
@@ -89,8 +99,8 @@ def downgrade():
         batch_op.drop_index(batch_op.f('ix_snippet_responses_participant_id'))
 
     op.drop_table('snippet_responses')
+    op.drop_table('participant_audio_assignments')
     with op.batch_alter_table('snippets', schema=None) as batch_op:
-        batch_op.drop_index(batch_op.f('ix_snippets_video_id'))
         batch_op.drop_index('idx_video_snippet')
 
     op.drop_table('snippets')
