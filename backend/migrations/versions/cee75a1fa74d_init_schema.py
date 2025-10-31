@@ -1,8 +1,8 @@
 """init schema
 
-Revision ID: 5b32074b4b8b
+Revision ID: cee75a1fa74d
 Revises: 
-Create Date: 2025-10-28 11:49:12.377039
+Create Date: 2025-10-30 19:58:07.943619
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '5b32074b4b8b'
+revision = 'cee75a1fa74d'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -51,6 +51,7 @@ def upgrade():
     sa.Column('transcript_original', sa.Text(), nullable=True),
     sa.Column('transcript_translated', sa.Text(), nullable=True),
     sa.Column('mcq_questions', sa.JSON(), nullable=True),
+    sa.Column('is_calibration', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['video_id'], ['videos.id'], ),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('video_id', 'snippet_index', name='unique_video_snippet')
@@ -58,6 +59,17 @@ def upgrade():
     with op.batch_alter_table('snippets', schema=None) as batch_op:
         batch_op.create_index('idx_video_snippet', ['video_id', 'snippet_index'], unique=False)
 
+    op.create_table('volume_calibrations',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('participant_id', sa.Integer(), nullable=False),
+    sa.Column('video_id', sa.Integer(), nullable=False),
+    sa.Column('optimal_volume', sa.Float(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['participant_id'], ['participants.id'], ),
+    sa.ForeignKeyConstraint(['video_id'], ['videos.id'], ),
+    sa.PrimaryKeyConstraint('id'),
+    sa.UniqueConstraint('participant_id', 'video_id', name='unique_participant_video_calibration')
+    )
     op.create_table('participant_audio_assignments',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('participant_id', sa.Integer(), nullable=False),
@@ -100,6 +112,7 @@ def downgrade():
 
     op.drop_table('snippet_responses')
     op.drop_table('participant_audio_assignments')
+    op.drop_table('volume_calibrations')
     with op.batch_alter_table('snippets', schema=None) as batch_op:
         batch_op.drop_index('idx_video_snippet')
 

@@ -24,7 +24,6 @@ function VideoPlayerPage() {
   const [isUploading, setIsUploading] = useState(false);
 
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
-  const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   const mediaRecorderRef = useRef(null);
   const recordedChunksRef = useRef([]);
@@ -107,9 +106,21 @@ function VideoPlayerPage() {
   }, [participantId, video]);
 
   useEffect(() => {
+    const interval = setInterval(() => {
+      const videoElement = document.querySelector('video');
+      if (videoElement && videoElement.playbackRate !== 1.0) {
+        console.warn('Playback rate changed, resetting to 1.0x');
+        videoElement.playbackRate = 1.0;
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
     setHasPlayedVideo(false);
     setHasVideoEnded(false);
-    setLastVideoTime(0);  // ADD THIS
+    setLastVideoTime(0);
 
     if (existingResponse) {
       //   console.log("Loading existing response for snippet:", currentSnippetIndex);
@@ -150,6 +161,20 @@ function VideoPlayerPage() {
 
   const handleVideoEnd = () => {
     setHasVideoEnded(true);
+  };
+
+  const handleKeyDown = (e) => {
+    const blockedKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', ' ', 'Home', 'End'];
+
+    if (blockedKeys.includes(e.key)) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        e.stopPropagation();
+    }
   };
 
   const startRecording = async () => {
@@ -344,12 +369,6 @@ function VideoPlayerPage() {
       await loadExistingResponses(participantId);
       alert("Response submitted successfully!");
 
-      const isLastSnippet =
-        video?.snippets && currentSnippetIndex === video.snippets.length - 1;
-
-      if (isLastSnippet) {
-        setShowCompleteModal(true);
-      }
     } catch (error) {
       console.error("=== Submit Failed ===");
       console.error("Error:", error);
@@ -360,24 +379,26 @@ function VideoPlayerPage() {
     }
   };
 
-  const handleNext = () => {
-    if (!video?.snippets) return;
+const handleNext = () => {
+  if (!video?.snippets) return;
 
-    if (recordingUrl) {
-      URL.revokeObjectURL(recordingUrl);
-    }
+  if (recordingUrl) {
+    URL.revokeObjectURL(recordingUrl);
+  }
 
-    if (currentSnippetIndex < video.snippets.length - 1) {
-      setCurrentSnippetIndex(currentSnippetIndex + 1);
+  const nextIndex = currentSnippetIndex + 1;
+  
+  if (nextIndex < video.snippets.length) {
+    const isLastSnippet = (nextIndex === video.snippets.length - 1);
+    
+    if (isLastSnippet) {
+      navigate(`/calibration/${videoId}`);
     } else {
-      setShowCompleteModal(true);
+      console.log("Moving to next regular snippet");
+      setCurrentSnippetIndex(nextIndex);
     }
-  };
-
-  const handleCompleteModalClose = () => {
-    setShowCompleteModal(false);
-    navigate("/");
-  };
+  }
+};
 
   if (!video || !participantId) {
     return (
@@ -443,11 +464,14 @@ function VideoPlayerPage() {
                 controls
                 controlsList="nodownload noplaybackrate"
                 disablePictureInPicture
+                disableRemotePlayback
                 onPlay={handleVideoPlay}
                 onEnded={handleVideoEnd}
-                onTimeUpdate={handleVideoTimeUpdate}           // ADD
-                onSeeking={(e) => { e.target.currentTime = lastVideoTime; }}  // ADD
+                onTimeUpdate={handleVideoTimeUpdate}
+                onSeeking={(e) => { e.target.currentTime = lastVideoTime; }}
                 onRateChange={(e) => { e.target.playbackRate = 1.0; }}
+                onKeyDown={handleKeyDown}
+                onContextMenu={(e) => e.preventDefault()}
                 src={`/videos/${
                     audioAssignments[currentSnippet.id] 
                     ? currentSnippet[`video_filename_${audioAssignments[currentSnippet.id]}`]
@@ -668,35 +692,6 @@ function VideoPlayerPage() {
                 Confirm
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* Complete Modal */}
-      {showCompleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h3 className="text-2xl font-bold mb-4">Conversation Complete!</h3>
-            <p className="mb-6">
-              You've completed all snippets for this conversation. Thank you for your
-              participation!
-            </p>
-            {video.google_form_url && (
-              <a
-                href={video.google_form_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded text-center mb-4"
-              >
-                Fill Out Survey
-              </a>
-            )}
-            <button
-              onClick={handleCompleteModalClose}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded"
-            >
-              Return to Home
-            </button>
           </div>
         </div>
       )}

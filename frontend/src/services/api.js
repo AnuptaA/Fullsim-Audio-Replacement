@@ -89,6 +89,13 @@ export const adminAPI = {
   deleteParticipant: (id) => api.delete(`/admin/participants/${id}`),
 };
 
+export const calibrationAPI = {
+  submit: (videoId, optimalVolume) => 
+    api.post('/calibration/', { video_id: videoId, optimal_volume: optimalVolume }),
+  get: (videoId) => 
+    api.get(`/calibration/video/${videoId}`),
+};
+
 export const uploadRecording = async (
   audioBlob,
   participantId,
