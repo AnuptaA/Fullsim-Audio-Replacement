@@ -50,35 +50,35 @@ def seed_database():
                 'video_id': 1,
                 'title': 'Spanish Conversation - Restaurant',
                 'description': 'Basic restaurant conversation in Spanish',
-                'total_snippets': 3,  # CHANGE TO 3
+                'total_snippets': 4,
                 'google_form_url': 'https://forms.google.com/example1'
             },
             {
                 'video_id': 2,
                 'title': 'Spanish Conversation - Shopping',
                 'description': 'Shopping conversation in Spanish',
-                'total_snippets': 3,  # CHANGE TO 3
+                'total_snippets': 4,
                 'google_form_url': 'https://forms.google.com/example2'
             },
             {
                 'video_id': 3,
                 'title': 'Spanish Conversation - Hotel',
                 'description': 'Hotel check-in conversation in Spanish',
-                'total_snippets': 3,  # CHANGE TO 3
+                'total_snippets': 4,
                 'google_form_url': 'https://forms.google.com/example3'
             },
             {
                 'video_id': 4,
                 'title': 'Spanish Conversation - Train Station',
                 'description': 'Asking for directions at a train station in Spanish',
-                'total_snippets': 3,  # CHANGE TO 3
+                'total_snippets': 4,
                 'google_form_url': 'https://forms.google.com/example4'
             },
             {
                 'video_id': 5,
                 'title': 'Spanish Conversation - Market',
                 'description': 'Shopping at a local market in Spanish',
-                'total_snippets': 3,  # CHANGE TO 3
+                'total_snippets': 4,
                 'google_form_url': 'https://forms.google.com/example5'
             }
         ]
@@ -100,6 +100,8 @@ def seed_database():
         
         for video in videos:
             for i in range(video.total_snippets):
+                is_last_snippet = (i == video.total_snippets - 1)
+                
                 snippet = Snippet(
                     video_id=video.id,
                     snippet_index=i,
@@ -109,28 +111,15 @@ def seed_database():
                     duration=5.0 + (i * 0.5),
                     transcript_original=f"Original: This is snippet {i} from {video.title}.",
                     transcript_translated=f"Translation: This is snippet {i} from {video.title}.",
+                    is_calibration=is_last_snippet,
                     mcq_questions=[
                         {
-                            'question': f'What is being discussed in snippet {i}?',
-                            'options': [
-                                'Topic A',
-                                'Topic B',
-                                'Topic C',
-                                'Topic D'
-                            ],
-                            'correct_answer': 0
-                        },
-                        {
-                            'question': f'Which phrase was used in snippet {i}?',
-                            'options': [
-                                'Phrase 1',
-                                'Phrase 2',
-                                'Phrase 3',
-                                'Phrase 4'
-                            ],
-                            'correct_answer': 1
+                            'question': f'Sample question {j+1} for snippet {i}?',
+                            'options': ['Option A', 'Option B', 'Option C', 'Option D'],
+                            'correct_answer': j % 4
                         }
-                    ]
+                        for j in range(3)
+                    ] if not is_last_snippet else []
                 )
                 db.session.add(snippet)
                 snippet_count += 1

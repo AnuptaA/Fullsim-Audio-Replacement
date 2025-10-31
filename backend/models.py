@@ -82,6 +82,7 @@ class Snippet(db.Model):
     transcript_original = db.Column(db.Text)
     transcript_translated = db.Column(db.Text)
     mcq_questions = db.Column(JSON)
+    is_calibration = db.Column(db.Boolean, default=False)
 
     __table_args__ = (
         db.UniqueConstraint('video_id', 'snippet_index', name='unique_video_snippet'),
@@ -100,6 +101,7 @@ class Snippet(db.Model):
             'transcript_original': self.transcript_original,
             'transcript_translated': self.transcript_translated,
             'mcq_questions': self.mcq_questions or [],
+            'is_calibration': self.is_calibration or False, 
         }
     
     def __repr__(self):
@@ -164,6 +166,31 @@ class ParticipantAudioAssignment(db.Model):
             'participant_id': self.participant_id,
             'snippet_id': self.snippet_id,
             'audio_type': self.audio_type,
+            'created_at': self.created_at.isoformat()
+        }
+    
+#----------------------------------------------------------------------#
+
+class VolumeCalibration(db.Model):
+    """Store participant's optimal volume level for each video"""
+    __tablename__ = 'volume_calibrations'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    participant_id = db.Column(db.Integer, db.ForeignKey('participants.id'), nullable=False)
+    video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False)
+    optimal_volume = db.Column(db.Float, nullable=False)  # 0.0 to 1.0
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    __table_args__ = (
+        db.UniqueConstraint('participant_id', 'video_id', name='unique_participant_video_calibration'),
+    )
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'participant_id': self.participant_id,
+            'video_id': self.video_id,
+            'optimal_volume': self.optimal_volume,
             'created_at': self.created_at.isoformat()
         }
     
