@@ -156,7 +156,7 @@ function VolumeCalibrationPage() {
                         Original Audio Volume: {Math.round(volume * 100)}%
                         </label>
                         <p className="text-sm text-gray-600 mb-2">
-                        Adjust this slider to control the level of the the original audio. Your system volume controls both audio tracks together.
+                        Adjust this slider to control the level of the original audio. Your system volume controls both audio tracks together.
                         </p>
                         <input
                         type="range"
