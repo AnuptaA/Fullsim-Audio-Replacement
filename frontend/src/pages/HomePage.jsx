@@ -138,7 +138,7 @@ function HomePage() {
               href="/admin/login"
               className="text-indigo-600 hover:text-indigo-700 text-sm"
             >
-              Admin Login →
+              Admin Login
             </a>
           </div>
         </div>

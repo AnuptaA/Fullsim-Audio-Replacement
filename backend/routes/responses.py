@@ -3,6 +3,7 @@ from models import db, Participant, Video, Snippet, SnippetResponse
 from datetime import datetime
 from flask_jwt_extended import jwt_required, get_jwt_identity
 import os
+import base64
 
 #----------------------------------------------------------------------#
 
@@ -34,16 +35,18 @@ def create_response():
     ).first()
     
     if existing:
-        # update existing response
-        existing.audio_recording_path = data.get('audio_recording_path')
+        existing.audio_recording_base64 = data.get('audio_recording_base64')
+        existing.audio_mime_type = data.get('audio_mime_type')
+        existing.audio_recording_path = data.get('audio_recording_path') # deprecated
         existing.audio_duration = data.get('audio_duration', 0.0)
         existing.mcq_answers = data.get('mcq_answers', [])
         existing.submitted_at = datetime.utcnow()
     else:
-        # create new response
         response = SnippetResponse(
             participant_id=participant.id,
             snippet_id=snippet.id,
+            audio_recording_base64=data.get('audio_recording_base64'),
+            audio_mime_type=data.get('audio_mime_type'),
             audio_recording_path=data.get('audio_recording_path'),
             audio_duration=data.get('audio_duration', 0.0),
             mcq_answers=data.get('mcq_answers', []),
@@ -94,14 +97,7 @@ def get_participant_video_responses(participant_id, video_id):
         SnippetResponse.participant_id == participant.id,
         SnippetResponse.snippet_id.in_(snippet_ids)
     ).all()
-    
-    return jsonify([{
-        'id': r.id,
-        'snippet_id': r.snippet_id,
-        'audio_recording_path': r.audio_recording_path,
-        'audio_duration': r.audio_duration,
-        'mcq_answers': r.mcq_answers,
-        'submitted_at': r.submitted_at.isoformat() if r.submitted_at else None
-    } for r in responses])
+
+    return jsonify([r.to_dict() for r in responses])
 
 #----------------------------------------------------------------------#

@@ -1,8 +1,8 @@
 """init schema
 
-Revision ID: cee75a1fa74d
+Revision ID: 97f802ec58fc
 Revises: 
-Create Date: 2025-10-30 19:58:07.943619
+Create Date: 2025-11-06 21:18:43.102270
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'cee75a1fa74d'
+revision = '97f802ec58fc'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -44,9 +44,9 @@ def upgrade():
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('video_id', sa.Integer(), nullable=False),
     sa.Column('snippet_index', sa.Integer(), nullable=False),
-    sa.Column('video_filename_full', sa.String(length=255), nullable=True),
-    sa.Column('video_filename_muffled', sa.String(length=255), nullable=True),
-    sa.Column('video_filename_balanced', sa.String(length=255), nullable=True),
+    sa.Column('video_filename_full', sa.String(length=500), nullable=True),
+    sa.Column('video_filename_muffled', sa.String(length=500), nullable=True),
+    sa.Column('video_filename_balanced', sa.String(length=500), nullable=True),
     sa.Column('duration', sa.Float(), nullable=True),
     sa.Column('transcript_original', sa.Text(), nullable=True),
     sa.Column('transcript_translated', sa.Text(), nullable=True),
@@ -86,6 +86,8 @@ def upgrade():
     sa.Column('participant_id', sa.Integer(), nullable=False),
     sa.Column('snippet_id', sa.Integer(), nullable=False),
     sa.Column('audio_recording_path', sa.String(length=500), nullable=True),
+    sa.Column('audio_recording_base64', sa.Text(), nullable=True),
+    sa.Column('audio_mime_type', sa.String(length=50), nullable=True),
     sa.Column('audio_duration', sa.Float(), nullable=True),
     sa.Column('mcq_answers', sa.JSON(), nullable=True),
     sa.Column('created_at', sa.DateTime(), nullable=False),

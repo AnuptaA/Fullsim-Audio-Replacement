@@ -146,6 +146,7 @@ vite.config.ts.timestamp-*
 ########################################################################
 **/__pycache__/
 backend/venv
+translations/venv
 
 ########################################################################
 #----------------------- build artifacts ------------------------------#
@@ -155,3 +156,20 @@ frontend/dist/
 
 # Flask build
 backend/static/
+
+# Video files
+translations/original/*.mp4
+translations/original/*.mov
+translations/original/*.avi
+translations/original/*.mkv
+translations/azure/*.mp4
+translations/azure/*.mov
+translations/azure/*.avi
+translations/azure/*.mkv
+translations/translated/*.mp4
+translations/temp/
+backend/videos/*.mp4
+backend/videos/*.mov
+
+# Annoying
+*.DS_Store

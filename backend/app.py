@@ -6,6 +6,7 @@ from flask_jwt_extended import JWTManager, get_jwt_identity, jwt_required
 from config import config
 from models import db
 from routes import register_routes
+import base64
 
 #---------------------------------------------------------------------#
 
@@ -55,16 +56,15 @@ def create_app(config_name=None):
             return jsonify({'error': 'No audio file'}), 400
         
         audio_file = request.files['audio']
-        video_id = request.form.get('video_id')
-        snippet_index = request.form.get('snippet_index')
+        snippet_id = request.form.get('snippet_id')
         
-        print(f"Participant: {participant_id}, Video: {video_id}, Snippet: {snippet_index}")
+        print(f"Participant: {participant_id}, Snippet ID: {snippet_id}")
         print(f"Audio file type: {audio_file.content_type}")
         print(f"Audio filename: {audio_file.filename}")
         
-        if not all([participant_id, video_id, snippet_index]):
+        if not all([participant_id, snippet_id]):
             print("ERROR: Missing parameters")
-            return jsonify({'error': 'Missing parameters'}), 400
+            return jsonify({'error': 'Missing participant_id or snippet_id'}), 400
         
         allowed_types = [
             'audio/webm',
@@ -82,42 +82,23 @@ def create_app(config_name=None):
             print(f"ERROR: Invalid file type: {audio_file.content_type}")
             return jsonify({'error': f'Invalid file type: {audio_file.content_type}'}), 400
         
-        recordings_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'recordings')
-        participant_dir = os.path.join(recordings_dir, participant_id, video_id)
-        
         try:
-            os.makedirs(participant_dir, exist_ok=True)
-            print(f"Created/verified directory: {participant_dir}")
+            audio_bytes = audio_file.read()
+            audio_base64 = base64.b64encode(audio_bytes).decode('utf-8')
+            file_size = len(audio_bytes)
+            print(f"Encoded audio: {file_size} bytes -> {len(audio_base64)} chars base64")
         except Exception as e:
-            print(f"ERROR creating directory: {e}")
-            return jsonify({'error': f'Could not create directory: {str(e)}'}), 500
+            print(f"ERROR encoding audio: {e}")
+            return jsonify({'error': f'Could not encode audio: {str(e)}'}), 500
         
-        extension = 'webm'
-        if 'ogg' in audio_file.content_type:
-            extension = 'ogg'
-        elif 'mp3' in audio_file.content_type or 'mpeg' in audio_file.content_type:
-            extension = 'mp3'
-        elif 'wav' in audio_file.content_type:
-            extension = 'wav'
-        elif 'mp4' in audio_file.content_type or 'm4a' in audio_file.content_type:
-            extension = 'm4a'
-        
-        filename = f"snippet_{snippet_index}.{extension}"
-        filepath = os.path.join(participant_dir, filename)
-        
-        try:
-            audio_file.save(filepath)
-            print(f"Saved file to: {filepath}")
-            print(f"File size: {os.path.getsize(filepath)} bytes")
-        except Exception as e:
-            print(f"ERROR saving file: {e}")
-            return jsonify({'error': f'Could not save file: {str(e)}'}), 500
-        
-        relative_path = f"recordings/{participant_id}/{video_id}/{filename}"
-        print(f"Returning path: {relative_path}")
+        print(f"Returning base64 data (length: {len(audio_base64)})")
         print("=== Upload Complete ===\n")
         
-        return jsonify({'path': relative_path}), 200
+        return jsonify({
+            'base64': audio_base64,
+            'mime_type': audio_file.content_type,
+            'size': file_size
+        }), 200
     
     @app.route('/api/health')
     def health_check():
@@ -137,15 +118,6 @@ def create_app(config_name=None):
         if not os.path.exists(full_path):
             return jsonify({'error': 'Video not found', 'path': full_path}), 404
         return send_from_directory(videos_dir, filepath)
-    
-    # serve audio recordings
-    @app.route('/recordings/<path:filepath>')
-    def serve_recording(filepath):
-        recordings_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'recordings')
-        full_path = os.path.join(recordings_dir, filepath)
-        if not os.path.exists(full_path):
-            return jsonify({'error': 'Recording not found'}), 404
-        return send_from_directory(recordings_dir, filepath)
 
     # serve React app and handle client-side routing
     @app.route('/', defaults={'path': ''})
@@ -160,7 +132,7 @@ def create_app(config_name=None):
             return jsonify({'error': 'API endpoint not found'}), 404
         
         # static files (videos, recordings) should be handled by specific routes above
-        if path.startswith('videos/') or path.startswith('recordings/'):
+        if path.startswith('videos/'):
             print(f"  -> File route not found: {path}")
             return jsonify({'error': 'File not found'}), 404
         

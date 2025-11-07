@@ -75,9 +75,9 @@ class Snippet(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False)
     snippet_index = db.Column(db.Integer, nullable=False)
-    video_filename_full = db.Column(db.String(255))
-    video_filename_muffled = db.Column(db.String(255))
-    video_filename_balanced = db.Column(db.String(255))
+    video_filename_full = db.Column(db.String(500))
+    video_filename_muffled = db.Column(db.String(500))
+    video_filename_balanced = db.Column(db.String(500))
     duration = db.Column(db.Float)
     transcript_original = db.Column(db.Text)
     transcript_translated = db.Column(db.Text)
@@ -116,7 +116,9 @@ class SnippetResponse(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     participant_id = db.Column(db.Integer, db.ForeignKey('participants.id'), nullable=False, index=True)
     snippet_id = db.Column(db.Integer, db.ForeignKey('snippets.id'), nullable=False, index=True)
-    audio_recording_path = db.Column(db.String(500))
+    audio_recording_path = db.Column(db.String(500)) # deprecated
+    audio_recording_base64 = db.Column(db.Text)
+    audio_mime_type = db.Column(db.String(50))
     audio_duration = db.Column(db.Float)
     mcq_answers = db.Column(JSON)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -127,13 +129,13 @@ class SnippetResponse(db.Model):
     )
     
     def to_dict(self):
-        # participant_id here is the FK (integer)
-        # routes will add the participant_id param when needed
         return {
             'id': self.id,
-            'participant_id': self.participant_id,  # this is the FK (integer)
+            'participant_id': self.participant_id,
             'snippet_id': self.snippet_id,
             'audio_recording_path': self.audio_recording_path,
+            'audio_recording_base64': self.audio_recording_base64,  # ✅ ADD THIS
+            'audio_mime_type': self.audio_mime_type,  # ✅ ADD THIS
             'audio_duration': self.audio_duration,
             'mcq_answers': self.mcq_answers or [],
             'created_at': self.created_at.isoformat() if self.created_at else None,

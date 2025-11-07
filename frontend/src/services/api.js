@@ -96,32 +96,33 @@ export const calibrationAPI = {
     api.get(`/calibration/video/${videoId}`),
 };
 
-export const uploadRecording = async (
-  audioBlob,
-  participantId,
-  videoId,
-  snippetIndex
-) => {
-  const formData = new FormData();
-  formData.append("audio", audioBlob, "recording.webm");
-  formData.append("participant_id", participantId);
-  formData.append("video_id", videoId);
-  formData.append("snippet_index", snippetIndex);
+// deprecated
+// export const uploadRecording = async (
+//   audioBlob,
+//   participantId,
+//   videoId,
+//   snippetIndex
+// ) => {
+//   const formData = new FormData();
+//   formData.append("audio", audioBlob, "recording.webm");
+//   formData.append("participant_id", participantId);
+//   formData.append("video_id", videoId);
+//   formData.append("snippet_index", snippetIndex);
 
-  // use relative URL in prod, full URL in dev
-  const uploadUrl = import.meta.env.DEV
-    ? "http://localhost:3000/api/upload-recording"
-    : "/api/upload-recording";
+//   // use relative URL in prod, full URL in dev
+//   const uploadUrl = import.meta.env.DEV
+//     ? "http://localhost:3000/api/upload-recording"
+//     : "/api/upload-recording";
 
-  const participantToken = localStorage.getItem("participantToken");
+//   const participantToken = localStorage.getItem("participantToken");
 
-  return axios.post(uploadUrl, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-      ...(participantToken && { Authorization: `Bearer ${participantToken}` }), 
-    },
-  });
-};
+//   return axios.post(uploadUrl, formData, {
+//     headers: {
+//       "Content-Type": "multipart/form-data",
+//       ...(participantToken && { Authorization: `Bearer ${participantToken}` }), 
+//     },
+//   });
+// };
 
 export const healthCheck = () => api.get("/health");
 
