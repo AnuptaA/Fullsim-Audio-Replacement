@@ -3,10 +3,6 @@ import axios from "axios";
 // in prod, use relative URLs; in dev, use full URL
 const API_BASE_URL = import.meta.env.DEV ? "http://localhost:3000/api" : "/api";
 
-// // API Client Secret - should be in .env for production
-// const API_CLIENT_SECRET =
-//   import.meta.env.VITE_API_CLIENT_SECRET || "dev-secret-key";
-
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -96,33 +92,19 @@ export const calibrationAPI = {
     api.get(`/calibration/video/${videoId}`),
 };
 
-// deprecated
-// export const uploadRecording = async (
-//   audioBlob,
-//   participantId,
-//   videoId,
-//   snippetIndex
-// ) => {
-//   const formData = new FormData();
-//   formData.append("audio", audioBlob, "recording.webm");
-//   formData.append("participant_id", participantId);
-//   formData.append("video_id", videoId);
-//   formData.append("snippet_index", snippetIndex);
-
-//   // use relative URL in prod, full URL in dev
-//   const uploadUrl = import.meta.env.DEV
-//     ? "http://localhost:3000/api/upload-recording"
-//     : "/api/upload-recording";
-
-//   const participantToken = localStorage.getItem("participantToken");
-
-//   return axios.post(uploadUrl, formData, {
-//     headers: {
-//       "Content-Type": "multipart/form-data",
-//       ...(participantToken && { Authorization: `Bearer ${participantToken}` }), 
-//     },
-//   });
-// };
+export const sessionAPI = {
+  start: (videoId) =>
+    api.post("/sessions/start", {
+      participant_id: localStorage.getItem('participantId'),
+      video_id: parseInt(videoId),
+    }),
+  end: (videoId) =>
+    api.post("/sessions/end", {
+      participant_id: localStorage.getItem('participantId'),
+      video_id: parseInt(videoId),
+    }),
+  get: (videoId) => api.get(`/sessions/participant/${localStorage.getItem('participantId')}/video/${videoId}`),
+};
 
 export const healthCheck = () => api.get("/health");
 

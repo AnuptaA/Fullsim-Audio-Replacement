@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { videoAPI, calibrationAPI } from "../services/api";
+import { videoAPI, calibrationAPI, sessionAPI } from "../services/api";
 
 function VolumeCalibrationPage() {
   const { videoId } = useParams();
@@ -33,7 +33,6 @@ function VolumeCalibrationPage() {
             setVideo(videoData);
             
             const lastSnippet = videoData.snippets[videoData.snippets.length - 1];
-            console.log("Last snippet (calibration):", lastSnippet);
             setCalibrationSnippet(lastSnippet);
             
         } catch (error) {
@@ -109,6 +108,14 @@ function VolumeCalibrationPage() {
     const handleSubmit = async () => {
         try {
             await calibrationAPI.submit(videoId, volume);
+            
+            try {
+                await sessionAPI.end(videoId);
+                console.log("Video session ended");
+            } catch (sessionError) {
+                console.error("Error ending session:", sessionError);
+            }
+            
             setCalibrationExists(true);
             setShowCompleteModal(true);
         } catch (error) {
@@ -240,7 +247,6 @@ function VolumeCalibrationPage() {
             </div>
             )}
         </div>
-    );
-}
+    )};
 
 export default VolumeCalibrationPage;

@@ -13,6 +13,18 @@ def validate_video_file(video_path):
     result = subprocess.run(cmd, capture_output=True, text=True)
     return 'audio' in result.stdout
 
+def get_audio_duration(audio_path):
+    """Get audio duration in seconds"""
+    probe_cmd = [
+        'ffprobe', '-v', 'error',
+        '-show_entries', 'format=duration',
+        '-of', 'default=noprint_wrappers=1:nokey=1',
+        audio_path
+    ]
+    
+    result = subprocess.run(probe_cmd, capture_output=True, text=True, check=True)
+    return float(result.stdout.strip())
+
 def get_video_duration(video_path):
     """Get video duration in seconds"""
     probe_cmd = [
@@ -41,27 +53,59 @@ def extract_audio_from_video(video_path, output_audio_path):
         raise Exception(f"Audio extraction failed: {result.stderr}")
 
 def create_video_with_audio_mix(original_video_path, translated_video_path, 
-                                 output_path, original_volume, translated_volume):
+                                 output_path, original_volume, translated_volume, delay_seconds=5.0):
     """
     Create video with mixed audio tracks
-    Uses video from Azure translation, mixes audio from both
+    Delays translated audio by delay_seconds relative to original
+    Extends video with still frame if needed to fit delayed audio
     """
-    video_duration = get_video_duration(translated_video_path)
+    # get durations
+    original_video_duration = get_video_duration(original_video_path)
+    translated_video_duration = get_video_duration(translated_video_path)
+    
+    # extract translated audio to check its duration
+    temp_audio = f"/tmp/temp_translated_audio_{os.getpid()}.wav"
+    extract_audio_from_video(translated_video_path, temp_audio)
+    translated_audio_duration = get_audio_duration(temp_audio)
+    os.remove(temp_audio)
+    
+    # calculate target duration: max of original video or (delay + translated audio)
+    target_duration = max(original_video_duration, delay_seconds + translated_audio_duration)
+    
+    # check if we need to extend the translated video
+    extension_needed = target_duration - translated_video_duration
+    
+    # build ffmpeg command
+    if extension_needed > 0.5:
+        # extend translated video with still frame
+        filter_complex = (
+            f'[0:v]tpad=stop_mode=clone:stop_duration={extension_needed}[v_extended];'
+            f'[1:a]volume={original_volume}[a_orig];'
+            f'[0:a]adelay={int(delay_seconds * 1000)}|{int(delay_seconds * 1000)},volume={translated_volume}[a_trans];'
+            f'[a_orig][a_trans]amix=inputs=2:duration=longest[aout]'
+        )
+        video_map = '[v_extended]'
+    else:
+        filter_complex = (
+            f'[1:a]volume={original_volume}[a_orig];'
+            f'[0:a]adelay={int(delay_seconds * 1000)}|{int(delay_seconds * 1000)},volume={translated_volume}[a_trans];'
+            f'[a_orig][a_trans]amix=inputs=2:duration=longest[aout]'
+        )
+        video_map = '0:v'
     
     cmd = [
-        'ffmpeg', '-y', '-loglevel', 'error',
+        'ffmpeg', '-y',
         '-i', translated_video_path,
         '-i', original_video_path,
-        '-filter_complex',
-        f'[1:a]volume={original_volume},apad=whole_dur={video_duration}[a1];'
-        f'[0:a]volume={translated_volume},apad=whole_dur={video_duration}[a2];'
-        f'[a1][a2]amix=inputs=2:duration=first[aout]',
-        '-map', '0:v',
+        '-filter_complex', filter_complex,
+        '-map', video_map,
         '-map', '[aout]',
-        '-c:v', 'copy',
+        '-c:v', 'libx264',
+        '-crf', '23',
+        '-preset', 'medium',
         '-c:a', 'aac',
         '-b:a', '128k',
-        '-shortest',
+        '-t', str(target_duration),
         output_path
     ]
     
@@ -70,16 +114,15 @@ def create_video_with_audio_mix(original_video_path, translated_video_path,
     if result.returncode != 0:
         raise Exception(f"Failed to create output video: {result.stderr}")
 
-def process_video_pair(original_video, azure_video, translated_dir):
+def process_video_pair(original_video, azure_video, translated_dir, delay_seconds=5.0):
     """
     Process a pair of original and Azure-translated videos
-    Creates muffled and balanced variants
+    Creates muffled and balanced variants with delayed translated audio
     """
     base_name = os.path.splitext(os.path.basename(original_video))[0]
     
     print(f"\n  Processing: {base_name}")
     
-    # validate both videos have audio
     if not validate_video_file(original_video):
         print(f"    WARNING: Original video has no audio, skipping...")
         return False
@@ -88,28 +131,85 @@ def process_video_pair(original_video, azure_video, translated_dir):
         print(f"    WARNING: Azure video has no audio, skipping...")
         return False
     
+    # check duration extension needed
+    original_duration = get_video_duration(original_video)
+    azure_duration = get_video_duration(azure_video)
+    
+    temp_audio = f"/tmp/check_audio_{os.getpid()}.wav"
+    extract_audio_from_video(azure_video, temp_audio)
+    audio_duration = get_audio_duration(temp_audio)
+    os.remove(temp_audio)
+    
+    target_duration = max(original_duration, delay_seconds + audio_duration)
+    extension_needed = target_duration - azure_duration
+    
+    if extension_needed > 0:
+        print(f"    > Video will be extended by ~{extension_needed:.1f}s (delay: {delay_seconds}s + audio: {audio_duration:.1f}s)")
+    
     # create variants
     variants = [
-        ("muffled", 0.3, 1.0, "30% Spanish + 100% English"),
-        ("balanced", 0.7, 1.0, "70% Spanish + 100% English")
+        ("muffled", 0.3, 1.0, "30% Spanish + 100% English (delayed)"),
+        ("balanced", 0.7, 1.0, "70% Spanish + 100% English (delayed)")
     ]
     
-    for variant_name, orig_vol, trans_vol, description in tqdm(variants, 
-                                                                desc="    Creating variants", 
-                                                                unit="variant", 
-                                                                leave=False):
+    for variant_name, orig_vol, trans_vol, description in variants:
         output_path = os.path.join(translated_dir, f"{base_name}_{variant_name}.mp4")
         print(f"      Creating {variant_name} ({description})...")
-        create_video_with_audio_mix(original_video, azure_video, 
-                                    output_path, orig_vol, trans_vol)
+        try:
+            create_video_with_audio_mix(original_video, azure_video, 
+                                        output_path, orig_vol, trans_vol, delay_seconds)
+        except Exception as e:
+            print(f"      ERROR: {e}")
+            return False
     
-    # copy Azure video as "full" variant
+    # for full variant, extend Azure video and delay audio
     full_output = os.path.join(translated_dir, f"{base_name}_full.mp4")
-    print(f"      Copying full translation (100% English)...")
-    shutil.copy2(azure_video, full_output)
+    print(f"      Creating full translation (100% English, delayed {delay_seconds}s)...")
+    
+    if extension_needed > 0.5:
+        cmd = [
+            'ffmpeg', '-y',
+            '-i', azure_video,
+            '-filter_complex',
+            f'[0:v]tpad=stop_mode=clone:stop_duration={extension_needed}[v];'
+            f'[0:a]adelay={int(delay_seconds * 1000)}|{int(delay_seconds * 1000)}[a]',
+            '-map', '[v]',
+            '-map', '[a]',
+            '-c:v', 'libx264',
+            '-crf', '23',
+            '-preset', 'medium',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-t', str(target_duration),
+            full_output
+        ]
+    else:
+        # still need to add delay even if no extension needed
+        target_with_delay = audio_duration + delay_seconds
+        cmd = [
+            'ffmpeg', '-y',
+            '-i', azure_video,
+            '-filter_complex',
+            f'[0:a]adelay={int(delay_seconds * 1000)}|{int(delay_seconds * 1000)}[a]',
+            '-map', '0:v',
+            '-map', '[a]',
+            '-c:v', 'libx264',
+            '-crf', '23',
+            '-preset', 'medium',
+            '-c:a', 'aac',
+            '-b:a', '128k',
+            '-t', str(max(azure_duration, target_with_delay)),
+            full_output
+        ]
+    
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        print(f"      WARNING: Failed to process video: {result.stderr}")
+        return False
     
     print(f"    > Created 3 variants for {base_name}")
     return True
+
 
 def match_original_to_azure(original_dir, azure_dir):
     """
@@ -121,7 +221,6 @@ def match_original_to_azure(original_dir, azure_dir):
     def normalize_name(filename):
         """Remove underscores, convert to lowercase for matching"""
         base = os.path.splitext(filename)[0]
-        # Remove all underscores and convert to lowercase
         normalized = base.replace('_', '').lower()
         return normalized
     

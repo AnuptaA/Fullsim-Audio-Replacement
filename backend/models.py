@@ -134,8 +134,8 @@ class SnippetResponse(db.Model):
             'participant_id': self.participant_id,
             'snippet_id': self.snippet_id,
             'audio_recording_path': self.audio_recording_path,
-            'audio_recording_base64': self.audio_recording_base64,  # ✅ ADD THIS
-            'audio_mime_type': self.audio_mime_type,  # ✅ ADD THIS
+            'audio_recording_base64': self.audio_recording_base64,
+            'audio_mime_type': self.audio_mime_type,
             'audio_duration': self.audio_duration,
             'mcq_answers': self.mcq_answers or [],
             'created_at': self.created_at.isoformat() if self.created_at else None,
@@ -196,4 +196,35 @@ class VolumeCalibration(db.Model):
             'created_at': self.created_at.isoformat()
         }
     
+#----------------------------------------------------------------------#
+
+class VideoSession(db.Model):
+    """Track time spent from opening video to completing calibration"""
+    __tablename__ = 'video_sessions'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    participant_id = db.Column(db.Integer, db.ForeignKey('participants.id'), nullable=False)
+    video_id = db.Column(db.Integer, db.ForeignKey('videos.id'), nullable=False)
+    session_start = db.Column(db.DateTime, nullable=False)  # when first snippet opened
+    session_end = db.Column(db.DateTime, nullable=True)  # when calibration submitted
+    total_duration_seconds = db.Column(db.Float, nullable=True)  # calculated on completion
+    
+    __table_args__ = (
+        db.UniqueConstraint('participant_id', 'video_id', name='unique_participant_video_session'),
+        db.Index('idx_participant_video_session', 'participant_id', 'video_id'),
+    )
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'participant_id': self.participant_id,
+            'video_id': self.video_id,
+            'session_start': self.session_start.isoformat() if self.session_start else None,
+            'session_end': self.session_end.isoformat() if self.session_end else None,
+            'total_duration_seconds': self.total_duration_seconds,
+        }
+    
+    def __repr__(self):
+        return f'<VideoSession participant:{self.participant_id} video:{self.video_id}>'
+
 #----------------------------------------------------------------------#

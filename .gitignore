@@ -166,7 +166,13 @@ translations/azure/*.mp4
 translations/azure/*.mov
 translations/azure/*.avi
 translations/azure/*.mkv
+translations/azure_nodelay/*.mp4
+translations/azure_nodelay/*.mov
+translations/azure_nodelay/*.avi
+translations/azure_nodelay/*.mkv
 translations/translated/*.mp4
+translations/translated_nodelay/*.mp4
+translations/translated_delay/*.mp4
 translations/temp/
 backend/videos/*.mp4
 backend/videos/*.mov

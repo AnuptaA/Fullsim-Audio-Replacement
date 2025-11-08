@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { videoAPI, responseAPI } from "../services/api";
+import { videoAPI, responseAPI, sessionAPI } from "../services/api";
 
 function VideoPlayerPage() {
   const { videoId } = useParams();
@@ -10,6 +10,7 @@ function VideoPlayerPage() {
   const [currentSnippetIndex, setCurrentSnippetIndex] = useState(0);
   const [participantId, setParticipantId] = useState("");
   const [existingResponses, setExistingResponses] = useState({});
+  const [currentAudioType, setCurrentAudioType] = useState(null);
   const [audioAssignments, setAudioAssignments] = useState({});
 
   const [hasPlayedVideo, setHasPlayedVideo] = useState(false);
@@ -120,35 +121,44 @@ function VideoPlayerPage() {
     setParticipantId(storedId);
     loadVideo();
     loadAudioAssignments();
+    startVideoSession();
   }, [videoId, navigate]);
 
-  const loadVideo = async () => {
+    const loadVideo = async () => {
+        try {
+            const response = await videoAPI.get(videoId);
+
+            if (!response.data.snippets || !Array.isArray(response.data.snippets)) {
+                console.error("Video data missing snippets array:", response.data);
+                alert("Error: Video data is incomplete");
+                return;
+            }
+
+            setVideo(response.data);
+        } catch (error) {
+            console.error("Error loading video:", error);
+            alert("Failed to load video");
+            navigate("/");
+        }
+    };
+
+    const loadAudioAssignments = async () => {
     try {
-      const response = await videoAPI.get(videoId);
-      //   console.log("Video data:", response.data);
-
-      if (!response.data.snippets || !Array.isArray(response.data.snippets)) {
-        console.error("Video data missing snippets array:", response.data);
-        alert("Error: Video data is incomplete");
-        return;
-      }
-
-      setVideo(response.data);
+        const response = await videoAPI.getAudioAssignments(videoId);
+        setAudioAssignments(response.data);
     } catch (error) {
-      console.error("Error loading video:", error);
-      alert("Failed to load video");
-      navigate("/");
+        console.error("Error loading audio assignments:", error);
     }
-  };
+    };
 
-  const loadAudioAssignments = async () => {
-    try {
-      const response = await videoAPI.getAudioAssignments(videoId);
-      setAudioAssignments(response.data);
-    } catch (error) {
-      console.error("Error loading audio assignments:", error);
-    }
-  };
+    const startVideoSession = async () => {
+        try {
+            await sessionAPI.start(videoId);
+            console.log("Video session started");
+        } catch (error) {
+            console.error("Error starting session:", error);
+        }
+    };
 
   const loadExistingResponses = async (pId) => {
     if (!pId || !videoId) return;
@@ -238,9 +248,14 @@ useEffect(() => {
         setRecordingMimeType(null);
     }
     setRecording(null);
+    
     if (recordingUrl && !existingResponse) {
         URL.revokeObjectURL(recordingUrl);
         setRecordingUrl(null);
+    }
+
+    if (currentSnippetId && audioAssignments[currentSnippetId]) {
+        setCurrentAudioType(audioAssignments[currentSnippetId]);
     }
 }, [currentSnippetIndex, existingResponse]);
 
@@ -557,32 +572,46 @@ const handleNext = () => {
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900 p-8">
         <div className="max-w-4xl mx-auto">
             <div className="mb-6 flex justify-between items-center">
-            <button
-                onClick={() => navigate("/")}
-                className="text-white hover:text-gray-300 flex items-center"
-            >
-                ← Back to Home
-            </button>
-            <div className="text-white">
-                Snippet {currentSnippetIndex + 1} of {video.snippets.length}
-            </div>
+                <button
+                    onClick={() => navigate("/")}
+                    className="text-white hover:text-gray-300 flex items-center"
+                >
+                    Back to Home
+                </button>
+                <div className="flex items-center gap-4">
+                    {currentAudioType && (
+                        <div className={`px-4 py-2 rounded-full font-semibold text-white`}>
+                            Audiotype: {currentAudioType.charAt(0).toUpperCase() + currentAudioType.slice(1)}
+                        </div>
+                    )}
+                    
+                    <div className="text-white">
+                        Snippet {currentSnippetIndex + 1} of {video.snippets.length}
+                    </div>
+                </div>
             </div>
 
             <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-lg p-8 mb-6">
             <h2 className="text-3xl font-bold text-white mb-4">{video.title}</h2>
-            <p className="text-gray-300 mb-6">{video.description}</p>
+            <p className="text-gray-300">{video.description}</p>
+            {currentAudioType && (
+                <p className="text-gray-300 mb-6">
+                    *The audio type is <span className="font-semibold">{currentAudioType.charAt(0).toUpperCase() + currentAudioType.slice(1)}</span>. 
+                    Please remember this for future reference.
+                </p>
+            )}
+
 
             {/* Instruction text */}
             {!hasPlayedVideo && !hasSubmitted && (
                 <div className="mb-4 p-4 bg-blue-900 bg-opacity-30 border border-blue-500 rounded-lg">
-                <p className="text-blue-200 text-center font-semibold">
-                    Press play below to start the snippet
-                </p>
+                    <p className="text-blue-200 text-center font-semibold">
+                        Press play below to start the snippet
+                    </p>
                 </div>
             )}
 
             {/* Video Player */}
-        
             <div className="relative bg-black rounded-lg overflow-hidden">
             <video
                 ref={videoRef}

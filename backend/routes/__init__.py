@@ -4,6 +4,7 @@ from .videos import videos_bp
 from .admin import admin_bp
 from .auth import auth_bp
 from .calibration import calibration_bp
+from .sessions import sessions_bp
 
 def register_routes(app):
     app.register_blueprint(participants_bp, url_prefix='/api/participants')
@@ -12,3 +13,4 @@ def register_routes(app):
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(calibration_bp, url_prefix='/api/calibration')
+    app.register_blueprint(sessions_bp, url_prefix='/api/sessions')
