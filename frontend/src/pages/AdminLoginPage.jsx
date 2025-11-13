@@ -16,6 +16,11 @@ function AdminLoginPage() {
     try {
       const response = await adminAPI.login(password);
       localStorage.setItem('adminToken', response.data.access_token);
+
+      localStorage.removeItem('participantId');
+      localStorage.removeItem('participantToken');
+      localStorage.removeItem('systemAudioCalibrated');
+
       navigate('/admin/dashboard');
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');

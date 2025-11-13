@@ -40,6 +40,10 @@ def create_response():
         existing.audio_recording_path = data.get('audio_recording_path') # deprecated
         existing.audio_duration = data.get('audio_duration', 0.0)
         existing.mcq_answers = data.get('mcq_answers', [])
+        existing.likert_mental_demand = data.get('likert_mental_demand')
+        existing.likert_tone_difficulty = data.get('likert_tone_difficulty')
+        existing.likert_confidence_conversation = data.get('likert_confidence_conversation')
+        existing.likert_nonlexical_preserved = data.get('likert_nonlexical_preserved')
         existing.submitted_at = datetime.utcnow()
     else:
         response = SnippetResponse(
@@ -50,6 +54,10 @@ def create_response():
             audio_recording_path=data.get('audio_recording_path'),
             audio_duration=data.get('audio_duration', 0.0),
             mcq_answers=data.get('mcq_answers', []),
+            likert_mental_demand=data.get('likert_mental_demand'),
+            likert_tone_difficulty=data.get('likert_tone_difficulty'),
+            likert_confidence_conversation=data.get('likert_confidence_conversation'),
+            likert_nonlexical_preserved=data.get('likert_nonlexical_preserved'),
             submitted_at=datetime.utcnow()
         )
         db.session.add(response)

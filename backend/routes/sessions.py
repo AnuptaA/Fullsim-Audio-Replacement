@@ -33,7 +33,7 @@ def start_session():
         video_id=video.id
     ).first()
     
-    if existing and not existing.session_end:
+    if existing:
         # session already started, return existing
         return jsonify(existing.to_dict()), 200
     

@@ -24,6 +24,10 @@ function VideoPlayerPage() {
   const [savedRecordingPath, setSavedRecordingPath] = useState(null);
   const [isRecording, setIsRecording] = useState(false);
   const [mcqAnswers, setMcqAnswers] = useState([]);
+  const [likertMentalDemand, setLikertMentalDemand] = useState(null);
+  const [likertToneDifficulty, setLikertToneDifficulty] = useState(null);
+  const [likertConfidenceConversation, setLikertConfidenceConversation] = useState(null);
+  const [likertNonlexicalPreserved, setLikertNonlexicalPreserved] = useState(null);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
@@ -40,7 +44,6 @@ function VideoPlayerPage() {
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
 
-    // Helper function to format time
     const formatTime = (seconds) => {
         if (!seconds || isNaN(seconds)) return "0:00";
         const mins = Math.floor(seconds / 60);
@@ -48,7 +51,6 @@ function VideoPlayerPage() {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
-    // Update your video event handlers
     const handleVideoPlay = () => {
         setHasPlayedVideo(true);
         setIsPlaying(true);
@@ -239,10 +241,22 @@ useEffect(() => {
         
         setSavedRecordingPath(existingResponse.audio_recording_path || null);
         setMcqAnswers(existingResponse.mcq_answers || []);
+
+        setLikertMentalDemand(existingResponse.likert_mental_demand || null);
+        setLikertToneDifficulty(existingResponse.likert_tone_difficulty || null);
+        setLikertConfidenceConversation(existingResponse.likert_confidence_conversation || null);
+        setLikertNonlexicalPreserved(existingResponse.likert_nonlexical_preserved || null);
+
         setHasSubmitted(!!existingResponse.submitted_at);
     } else {
         setSavedRecordingPath(null);
         setMcqAnswers([]);
+
+        setLikertMentalDemand(null);
+        setLikertToneDifficulty(null);
+        setLikertConfidenceConversation(null);
+        setLikertNonlexicalPreserved(null);
+
         setHasSubmitted(false);
         setRecordingBase64(null);
         setRecordingMimeType(null);
@@ -391,11 +405,6 @@ useEffect(() => {
   };
 
   const handleSubmit = async () => {
-    console.log("=== Starting Submit ===");
-    console.log("Recording:", recording);
-    console.log("Saved base64:", recordingBase64 ? "exists" : "none");
-    console.log("MCQ answers:", mcqAnswers);
-
     if (!recording && !recordingBase64) {
         alert("Please record your audio response first!");
         return;
@@ -405,6 +414,12 @@ useEffect(() => {
         alert(
             `Please answer all ${currentSnippet.mcq_questions.length} questions! You've answered ${mcqAnswers.length}.`
         );
+        return;
+    }
+
+    if (!likertMentalDemand || !likertToneDifficulty || 
+        !likertConfidenceConversation || !likertNonlexicalPreserved) {
+        alert("Please answer all evaluation questions!");
         return;
     }
 
@@ -451,6 +466,10 @@ useEffect(() => {
             audio_recording_path: `base64_${participantId}_${currentSnippetId}`, // reference only
             audio_duration: 5.0,
             mcq_answers: mcqAnswers,
+            likert_mental_demand: likertMentalDemand,
+            likert_tone_difficulty: likertToneDifficulty,
+            likert_confidence_conversation: likertConfidenceConversation,
+            likert_nonlexical_preserved: likertNonlexicalPreserved,
             submit: true,
         };
 
@@ -578,13 +597,7 @@ const handleNext = () => {
                 >
                     Back to Home
                 </button>
-                <div className="flex items-center gap-4">
-                    {currentAudioType && (
-                        <div className={`px-4 py-2 rounded-full font-semibold text-white`}>
-                            Audiotype: {currentAudioType.charAt(0).toUpperCase() + currentAudioType.slice(1)}
-                        </div>
-                    )}
-                    
+                <div className="flex items-center gap-4">                   
                     <div className="text-white">
                         Snippet {currentSnippetIndex + 1} of {video.snippets.length}
                     </div>
@@ -594,13 +607,7 @@ const handleNext = () => {
             <div className="bg-white bg-opacity-10 backdrop-blur-lg rounded-lg p-8 mb-6">
             <h2 className="text-3xl font-bold text-white mb-4">{video.title}</h2>
             <p className="text-gray-300">{video.description}</p>
-            {currentAudioType && (
-                <p className="text-gray-300 mb-6">
-                    *The audio type is <span className="font-semibold">{currentAudioType.charAt(0).toUpperCase() + currentAudioType.slice(1)}</span>. 
-                    Please remember this for future reference.
-                </p>
-            )}
-
+            <p className="text-gray-300 mt-2 mb-4">If you experience difficulties with the video, please try refreshing the page or switching to another browser. If the issues persist, please reach out to us by email.</p>
 
             {/* Instruction text */}
             {!hasPlayedVideo && !hasSubmitted && (
@@ -625,7 +632,7 @@ const handleNext = () => {
                 onEnded={handleVideoEnd}
                 onTimeUpdate={handleVideoTimeUpdate}
                 onLoadedMetadata={handleVideoLoadedMetadata}
-                onClick={togglePlayPause} // Click anywhere on video to play/pause
+                onClick={togglePlayPause}
                 onSeeking={(e) => { 
                 e.preventDefault();
                 e.target.currentTime = lastVideoTime; 
@@ -886,6 +893,172 @@ const handleNext = () => {
                             </div>
                         </div>
                         ))}
+                    </div>
+                    
+                    <div className="mt-8 pt-6 border-t border-gray-400">
+                        <h3 className="text-xl font-bold text-white mb-2">
+                        Evaluation Questions
+                        </h3>
+
+                        {/* Question 1: Mental Demand */}
+                        <div className="mb-6">
+                        <p className="text-white font-semibold mb-3">
+                            Understanding the contents of snippets was mentally demanding
+                        </p>
+                        <div className="flex justify-between space-x-2">
+                            {[
+                            { value: 1, label: 'Strongly Disagree' },
+                            { value: 2, label: 'Disagree' },
+                            { value: 3, label: 'Neutral' },
+                            { value: 4, label: 'Agree' },
+                            { value: 5, label: 'Strongly Agree' }
+                            ].map(({ value, label }) => (
+                            <label
+                                key={value}
+                                className="flex-1 cursor-pointer"
+                            >
+                                <input
+                                type="radio"
+                                name="likert-mental-demand"
+                                value={value}
+                                checked={likertMentalDemand === value}
+                                onChange={() => setLikertMentalDemand(value)}
+                                disabled={hasSubmitted}
+                                className="sr-only"
+                                />
+                                <div
+                                className={`p-3 rounded-lg text-center text-sm border-2 transition ${
+                                    likertMentalDemand === value
+                                    ? 'bg-blue-600 border-blue-400 text-white'
+                                    : 'bg-white bg-opacity-10 border-gray-400 text-gray-300 hover:bg-opacity-20'
+                                } ${hasSubmitted ? 'cursor-not-allowed opacity-50' : ''}`}
+                                >
+                                {label}
+                                </div>
+                            </label>
+                            ))}
+                        </div>
+                        </div>
+
+                        {/* Question 2: Tone Difficulty */}
+                        <div className="mb-6">
+                        <p className="text-white font-semibold mb-3">
+                            It was difficult to grasp the tone of the speaker
+                        </p>
+                        <div className="flex justify-between space-x-2">
+                            {[
+                            { value: 1, label: 'Strongly Disagree' },
+                            { value: 2, label: 'Disagree' },
+                            { value: 3, label: 'Neutral' },
+                            { value: 4, label: 'Agree' },
+                            { value: 5, label: 'Strongly Agree' }
+                            ].map(({ value, label }) => (
+                            <label
+                                key={value}
+                                className="flex-1 cursor-pointer"
+                            >
+                                <input
+                                type="radio"
+                                name="likert-tone-difficulty"
+                                value={value}
+                                checked={likertToneDifficulty === value}
+                                onChange={() => setLikertToneDifficulty(value)}
+                                disabled={hasSubmitted}
+                                className="sr-only"
+                                />
+                                <div
+                                className={`p-3 rounded-lg text-center text-sm border-2 transition ${
+                                    likertToneDifficulty === value
+                                    ? 'bg-blue-600 border-blue-400 text-white'
+                                    : 'bg-white bg-opacity-10 border-gray-400 text-gray-300 hover:bg-opacity-20'
+                                } ${hasSubmitted ? 'cursor-not-allowed opacity-50' : ''}`}
+                                >
+                                {label}
+                                </div>
+                            </label>
+                            ))}
+                        </div>
+                        </div>
+
+                        {/* Question 3: Confidence in Conversation */}
+                        <div className="mb-6">
+                        <p className="text-white font-semibold mb-3">
+                            I felt confident I could answer the speaker had it been a real face-to-face conversation
+                        </p>
+                        <div className="flex justify-between space-x-2">
+                            {[
+                            { value: 1, label: 'Strongly Disagree' },
+                            { value: 2, label: 'Disagree' },
+                            { value: 3, label: 'Neutral' },
+                            { value: 4, label: 'Agree' },
+                            { value: 5, label: 'Strongly Agree' }
+                            ].map(({ value, label }) => (
+                            <label
+                                key={value}
+                                className="flex-1 cursor-pointer"
+                            >
+                                <input
+                                type="radio"
+                                name="likert-confidence"
+                                value={value}
+                                checked={likertConfidenceConversation === value}
+                                onChange={() => setLikertConfidenceConversation(value)}
+                                disabled={hasSubmitted}
+                                className="sr-only"
+                                />
+                                <div
+                                className={`p-3 rounded-lg text-center text-sm border-2 transition ${
+                                    likertConfidenceConversation === value
+                                    ? 'bg-blue-600 border-blue-400 text-white'
+                                    : 'bg-white bg-opacity-10 border-gray-400 text-gray-300 hover:bg-opacity-20'
+                                } ${hasSubmitted ? 'cursor-not-allowed opacity-50' : ''}`}
+                                >
+                                {label}
+                                </div>
+                            </label>
+                            ))}
+                        </div>
+                        </div>
+
+                        {/* Question 4: Non-lexical Features */}
+                        <div className="mb-6">
+                        <p className="text-white font-semibold mb-3">
+                            Non-lexical features such as pausing, stammering, and false starts were preserved in the audio
+                        </p>
+                        <div className="flex justify-between space-x-2">
+                            {[
+                            { value: 1, label: 'Strongly Disagree' },
+                            { value: 2, label: 'Disagree' },
+                            { value: 3, label: 'Neutral' },
+                            { value: 4, label: 'Agree' },
+                            { value: 5, label: 'Strongly Agree' }
+                            ].map(({ value, label }) => (
+                            <label
+                                key={value}
+                                className="flex-1 cursor-pointer"
+                            >
+                                <input
+                                type="radio"
+                                name="likert-nonlexical"
+                                value={value}
+                                checked={likertNonlexicalPreserved === value}
+                                onChange={() => setLikertNonlexicalPreserved(value)}
+                                disabled={hasSubmitted}
+                                className="sr-only"
+                                />
+                                <div
+                                className={`p-3 rounded-lg text-center text-sm border-2 transition ${
+                                    likertNonlexicalPreserved === value
+                                    ? 'bg-blue-600 border-blue-400 text-white'
+                                    : 'bg-white bg-opacity-10 border-gray-400 text-gray-300 hover:bg-opacity-20'
+                                } ${hasSubmitted ? 'cursor-not-allowed opacity-50' : ''}`}
+                                >
+                                {label}
+                                </div>
+                            </label>
+                            ))}
+                        </div>
+                        </div>
                     </div>
 
                     {hasSubmitted && (

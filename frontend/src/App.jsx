@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage';
+import SystemCalibrationPage from './pages/SystemCalibrationPage';
 import VideoPlayerPage from './pages/VideoPlayerPage';
 import VolumeCalibrationPage from './pages/VolumeCalibrationPage';
 import AdminLoginPage from './pages/AdminLoginPage';
@@ -10,6 +11,7 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
+        <Route path="/system-calibration" element={<SystemCalibrationPage />} />
         <Route path="/video/:videoId" element={<VideoPlayerPage />} />
         <Route path="/calibration/:videoId" element={<VolumeCalibrationPage />} />
         <Route path="/admin/login" element={<AdminLoginPage />} />

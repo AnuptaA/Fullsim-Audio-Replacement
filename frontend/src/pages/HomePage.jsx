@@ -13,12 +13,20 @@ function HomePage() {
   useEffect(() => {
     const storedId = localStorage.getItem("participantId");
     const storedToken = localStorage.getItem("participantToken");
+    const calibrated = localStorage.getItem("systemAudioCalibrated");
+
     if (storedId && storedToken) {
       setParticipantId(storedId);
       setIsValidated(true);
+
+        if (calibrated !== "true") {
+            navigate("/system-calibration");
+            return;
+        }
+
       loadVideos();
     }
-  }, []);
+  }, [navigate]);
 
   const loadVideos = async () => {
     try {
@@ -33,6 +41,9 @@ function HomePage() {
     setLoading(true);
     setError("");
     try {
+      // clear any previous calibration state when validating new/different participant
+      localStorage.removeItem("systemAudioCalibrated");
+
       // validate the ID
       const validateResponse = await participantAPI.validate(id);
       if (validateResponse.data.valid) {
@@ -41,9 +52,7 @@ function HomePage() {
         localStorage.setItem("participantId", id);
         setParticipantId(id);
         setIsValidated(true);
-
-        const videoResponse = await videoAPI.list();
-         setVideos(videoResponse.data);
+        navigate("/system-calibration");
       } else {
         setError("Invalid Participant ID");
         setIsValidated(false);
@@ -97,7 +106,7 @@ function HomePage() {
               </svg>
             </div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Welcome!</h1>
-            <p className="text-gray-600">Language Learning Study</p>
+            <p className="text-gray-600">HCI Language Learning Study</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -163,6 +172,8 @@ function HomePage() {
               <button
                 onClick={() => {
                   localStorage.removeItem("participantId");
+                  localStorage.removeItem("participantToken");
+                  localStorage.removeItem("systemAudioCalibrated");
                   setIsValidated(false);
                   setParticipantId("");
                 }}

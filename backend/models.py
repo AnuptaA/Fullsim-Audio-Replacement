@@ -121,6 +121,12 @@ class SnippetResponse(db.Model):
     audio_mime_type = db.Column(db.String(50))
     audio_duration = db.Column(db.Float)
     mcq_answers = db.Column(JSON)
+
+    likert_mental_demand = db.Column(db.Integer, nullable=True)
+    likert_tone_difficulty = db.Column(db.Integer, nullable=True)
+    likert_confidence_conversation = db.Column(db.Integer, nullable=True)
+    likert_nonlexical_preserved = db.Column(db.Integer, nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     submitted_at = db.Column(db.DateTime, nullable=True, index=True)
     
@@ -138,6 +144,10 @@ class SnippetResponse(db.Model):
             'audio_mime_type': self.audio_mime_type,
             'audio_duration': self.audio_duration,
             'mcq_answers': self.mcq_answers or [],
+            'likert_mental_demand': self.likert_mental_demand,
+            'likert_tone_difficulty': self.likert_tone_difficulty,
+            'likert_confidence_conversation': self.likert_confidence_conversation,
+            'likert_nonlexical_preserved': self.likert_nonlexical_preserved,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'submitted_at': self.submitted_at.isoformat() if self.submitted_at else None,
         }

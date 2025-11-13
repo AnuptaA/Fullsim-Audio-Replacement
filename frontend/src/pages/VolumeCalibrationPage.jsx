@@ -200,7 +200,10 @@ function VolumeCalibrationPage() {
                             step="0.01"
                             value={volume}
                             onChange={(e) => setVolume(parseFloat(e.target.value))}
-                            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                            disabled={calibrationExists}
+                            className={`w-full h-2 bg-gray-200 rounded-lg appearance-none ${
+                                calibrationExists ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                            }`}
                         />
                         <div className="flex justify-between text-xs text-gray-500">
                         <span>0%</span>
@@ -214,7 +217,7 @@ function VolumeCalibrationPage() {
                             onClick={handleSubmit}
                             className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors font-medium"
                         >
-                            {calibrationExists ? "Continue to Survey" : "Submit and Continue to Survey"}
+                            {calibrationExists ? "Continue" : "Submit and Continue"}
                         </button>
                     </div>
                 </div>
@@ -227,16 +230,6 @@ function VolumeCalibrationPage() {
                     <p className="mb-6">
                     You've completed all snippets for this conversation. Thank you for your participation!
                     </p>
-                    {video.google_form_url && (
-                    <a
-                        href={video.google_form_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded text-center mb-4"
-                    >
-                        Fill Out Survey
-                    </a>
-                    )}
                     <button
                     onClick={handleCompleteModalClose}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded"
