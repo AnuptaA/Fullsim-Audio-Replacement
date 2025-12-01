@@ -256,6 +256,7 @@ def export_comprehensive_data(output_file='comprehensive_participant_data.csv'):
             ON vc.participant_id = p.id AND vc.video_id = v.id
         WHERE sr.submitted_at IS NOT NULL
             AND p.created_at >= '2025-11-16 00:00:00'
+            AND p.participant_id != 'C932F261'
         ORDER BY p.participant_id, v.id, s.snippet_index
         """)
         
